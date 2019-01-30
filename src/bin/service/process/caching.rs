@@ -3,9 +3,9 @@ use std::fs::File;
 use std::io::BufWriter;
 use std::io::Write;
 use std::path::Path;
-use svc_shader::error::{Error, ErrorKind, Result};
-use svc_shader::proto;
-use svc_shader::utilities::{path_exists, read_file};
+use svc_texture::error::{Error, ErrorKind, Result};
+use svc_texture::proto;
+use svc_texture::utilities::{path_exists, read_file};
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 pub struct ProcessTransform {
