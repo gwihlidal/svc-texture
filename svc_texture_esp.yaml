@@ -1,0 +1,25 @@
+# The configuration schema is defined by service.proto file
+# https://github.com/googleapis/googleapis/blob/master/google/api/service.proto
+type: google.api.Service
+config_version: 3
+
+# Name of the service configuration
+name: svc-texture.endpoints.gw-cloud-1.cloud.goog
+
+# API title to appear in the user interface (Google Cloud Console)
+title: Texture Service gRPC API
+apis:
+- name: service.Texture
+
+# API usage restrictions
+usage:
+  rules:
+  # Allow unregistered calls for all methods.
+  - selector: "*"
+    allow_unregistered_calls: true
+
+# Regenerate service.pb with:
+# protoc --proto_path=. --include_imports --include_source_info --descriptor_set_out=svc_texture.pb service.proto
+
+# Redeploy with:
+# gcloud endpoints services deploy svc_texture.pb ../svc_texture_esp.yaml

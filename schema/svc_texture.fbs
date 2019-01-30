@@ -1,0 +1,19 @@
+namespace service.texture.schema;
+
+table Artifact {
+    name:string;
+    identity:string;
+    data:[ubyte];    
+}
+
+table Texture {
+    name:string;
+    entry:string;
+    artifact:Artifact;
+}
+
+table Manifest {
+    textures:[Texture];
+}
+
+root_type Manifest;

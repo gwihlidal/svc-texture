@@ -1,0 +1,28 @@
+syntax = "proto3";
+package service;
+
+import "common.proto";
+
+message DownloadRequest {
+	common.StorageIdentity identity = 1;
+	string encoding = 2;
+}
+
+message CompressRequest {
+	common.StorageIdentity input = 1;
+	// TODO: Options
+}
+
+message ProcessOutput {
+	string name = 1;
+	string output = 2;
+	string errors = 3;
+	common.StorageIdentity identity = 4;
+}
+
+service Texture {
+	rpc Query(stream common.StorageIdentity) returns (stream common.StorageState) {}
+	rpc Upload(stream common.StorageContent) returns (common.StorageIdentity) {}
+	rpc Download(DownloadRequest) returns (stream common.StorageContent) {}
+	//rpc Compress(CompressRequest) returns (stream ProcessOutput) {}
+}

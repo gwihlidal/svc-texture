@@ -1,0 +1,1 @@
+protoc --proto_path=. --include_imports --include_source_info --descriptor_set_out=svc_texture.pb service.proto

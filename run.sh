@@ -1,0 +1,1 @@
+cargo run --release --bin client -- --input tests/manifest.toml --debug --download --parallel
