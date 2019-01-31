@@ -12,7 +12,6 @@ extern crate chrono;
 extern crate fern;
 extern crate flatbuffers;
 
-use std::collections::hash_map::HashMap;
 use std::fs::File;
 use std::io::{BufWriter, Write};
 use std::path::Path;
@@ -20,15 +19,14 @@ use std::path::PathBuf;
 use scoped_threadpool::Pool;
 use structopt::StructOpt;
 use svc_texture::client::transport;
-//use svc_texture::compile::*;
+use svc_texture::compile::*;
 //use svc_texture::encoding::{decode_data, encode_data, Encoding};
-//use svc_texture::error::{Error, Result};
-//use svc_texture::proto::drivers;
-//use svc_texture::utilities::{self, path_exists, read_file};
+use svc_texture::error::{/*Error,*/ Result};
+use svc_texture::utilities::{/*self,*/ path_exists, read_file};
 use std::sync::{RwLock, Arc};
 
 mod generated;
-use crate::generated::service::texture::schema;
+//use crate::generated::service::texture::schema;
 
 const VERSION: Option<&'static str> = option_env!("CARGO_PKG_VERSION");
 
@@ -142,7 +140,7 @@ fn main() {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Default, Debug)]
 struct TextureArtifact {
     name: String,
     identity: String,
@@ -153,7 +151,7 @@ struct TextureArtifact {
 struct TextureRecord {
     name: String,
     entry: String,
-    artifacts: TextureArtifact,
+    artifact: TextureArtifact,
 }
 
 fn process() -> Result<()> {
@@ -190,7 +188,7 @@ fn process() -> Result<()> {
     let mut thread_pool = Pool::new(8);
 
     // Load texture manifest from toml path
-    let manifest = load_manifest(&process_opt.input.as_path())?;
+    let _manifest = load_manifest(&process_opt.input.as_path())?;
 
     let mut active_identities: Vec<String> = Vec::new();//with_capacity(manifest.entries.len() * 16);
 
@@ -233,17 +231,17 @@ fn process() -> Result<()> {
         let records = records.read().unwrap();
         for record in &*records {
             let identity_path = cache_path.join(&record.artifact.identity);
-            if cache_miss(cache_path, &artifact.identity) {
-                let remote_data = transport::download_identity(&config, &artifact.identity)?;
-                cache_if_missing(cache_path, &artifact.identity, &remote_data)?;
+            if cache_miss(cache_path, &record.artifact.identity) {
+                let remote_data = transport::download_identity(&config, &record.artifact.identity)?;
+                cache_if_missing(cache_path, &record.artifact.identity, &remote_data)?;
                 debug!(
-                    "  {} -> {} '{}' [Cache Miss]: {:?}",
-                    input_name, output_name, artifact.name, identity_path
+                    "  '{}' [Cache Miss]: {:?}",
+                    record.artifact.name, identity_path
                 );
             } else {
                 debug!(
-                    "  {} -> {} '{}' [Cache Hit]: {:?}",
-                    input_name, output_name, artifact.name, identity_path
+                    "  '{}' [Cache Hit]: {:?}",
+                    record.artifact.name, identity_path
                 );
             }
         }

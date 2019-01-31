@@ -15,13 +15,12 @@ pub struct TextureManifest {
 }
 
 impl TextureManifest {
-    pub fn validate(&self, base_dir: &Path) -> Result<()> {
+    pub fn validate(&self) -> Result<()> {
         for entry in &self.entries {
-            let texture_file = base_dir.join(&entry.file);
-            if !path_exists(&texture_file) {
+            if !path_exists(&entry.file) {
                 return Err(Error::config(format!(
                     "file {:?} does not exist",
-                    texture_file
+                    entry.file
                 )));
             }
         }
@@ -29,13 +28,13 @@ impl TextureManifest {
     }
 }
 
-pub fn load_manifest(base_dir: &Path, path: &Path) -> Result<TextureManifest> {
+pub fn load_manifest(path: &Path) -> Result<TextureManifest> {
     let manifest_toml = read_file_string(&path).with_context(|_| ErrorKind::path(path))?;
-    parse_manifest(base_dir, &manifest_toml)
+    parse_manifest(&manifest_toml)
 }
 
-pub fn parse_manifest(base_dir: &Path, manifest_toml: &str) -> Result<TextureManifest> {
+pub fn parse_manifest(manifest_toml: &str) -> Result<TextureManifest> {
     let manifest: TextureManifest = toml::from_str(&manifest_toml)?;
-    manifest.validate(&base_dir)?;
+    manifest.validate()?;
     Ok(manifest)
 }

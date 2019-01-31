@@ -1,5 +1,4 @@
 use filebuffer::FileBuffer;
-use normalize_line_endings::normalized;
 use std::env;
 use std::fs::File;
 use std::io::Read;
@@ -101,7 +100,7 @@ pub fn read_file_string<P: AsRef<Path>>(path: P) -> io::Result<String> {
         text.reserve(meta.len() as usize); // Safe to truncate, since it's only a suggestion
     }
     file.read_to_string(&mut text)?;
-    let text = String::from_iter(normalized(text.chars()));
+    //let text = String::from_iter(normalized(text.chars()));
     Ok(text)
 }
 
