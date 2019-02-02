@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 extern crate base58;
 extern crate chashmap;
 extern crate scoped_threadpool;
@@ -188,8 +190,11 @@ fn process() -> Result<()> {
     let mut thread_pool = Pool::new(8);
 
     // Load texture manifest from toml path
-    let _manifest = load_manifest(&process_opt.input.as_path())?;
+    let manifest = load_manifest(&process_opt.input.as_path())?;
 
+    println!("manifest: {:?}", manifest);
+
+/*
     let mut active_identities: Vec<String> = Vec::new(); //with_capacity(manifest.entries.len() * 16);
 
     // Remove multiple references to the same file (for efficiency).
@@ -295,6 +300,8 @@ fn process() -> Result<()> {
             manifest_writer.write_all(&manifest_data)?;
         }
     */
+
+*/
 
     Ok(())
 }

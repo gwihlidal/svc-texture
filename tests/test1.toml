@@ -1,0 +1,5 @@
+[[entries]]
+name = "sponza_arch_diff"
+file = "tests/sponza/sponza_arch_diff.png"
+format = "bc7"
+mips = true

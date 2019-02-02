@@ -7,6 +7,8 @@ use std::path::Path;
 pub struct TextureEntry {
     pub name: String,
     pub file: String,
+    pub format: String,
+    pub mips: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
