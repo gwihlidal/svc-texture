@@ -13,6 +13,8 @@ extern crate log;
 extern crate chrono;
 extern crate fern;
 extern crate flatbuffers;
+extern crate image;
+extern crate ddsfile;
 
 use scoped_threadpool::Pool;
 use std::fs::File;
@@ -217,6 +219,7 @@ fn process() -> Result<()> {
     active_identities.dedup_by(|a, b| a.eq(&b));
 
     // Query what identities are missing from the remote endpoint.
+    /*
     let missing_identities = transport::query_missing_identities(&config, &active_identities)?;
 
     // Upload missing identities to the remote endpoint.
@@ -241,6 +244,14 @@ fn process() -> Result<()> {
             let uploaded_identity =
                 transport::upload_identity(&config, &missing_identity, &identity_data)?;
             assert_eq!(missing_identity, &uploaded_identity);
+        }
+    }
+    */
+
+    {
+        let mut records = records.write().unwrap();
+        for record in &*records {
+            //
         }
     }
 

@@ -35,7 +35,9 @@ extern crate twox_hash;
 extern crate log;
 extern crate fern;
 //#[macro_use]
+extern crate ddsfile;
 extern crate flatbuffers;
+extern crate image;
 extern crate intel_tex;
 extern crate structopt;
 
