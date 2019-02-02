@@ -25,7 +25,7 @@ use svc_texture::compile::*;
 //use svc_texture::encoding::{decode_data, encode_data, Encoding};
 use std::sync::{Arc, RwLock};
 use svc_texture::error::Result;
-use svc_texture::utilities::{/*self,*/ path_exists, read_file};
+use svc_texture::utilities::{compute_file_identity, /*self,*/ path_exists, read_file};
 
 mod generated;
 //use crate::generated::service::texture::schema;
@@ -151,9 +151,9 @@ struct TextureArtifact {
 
 #[derive(Clone, Default, Debug)]
 struct TextureRecord {
-    name: String,
-    entry: String,
-    artifact: TextureArtifact,
+    entry: TextureEntry,
+    input_identity: String,
+    output_identity: Option<String>,
 }
 
 fn process() -> Result<()> {
@@ -192,10 +192,25 @@ fn process() -> Result<()> {
     // Load texture manifest from toml path
     let manifest = load_manifest(&process_opt.input.as_path())?;
 
-    println!("manifest: {:?}", manifest);
+    let mut active_identities: Vec<String> = Vec::with_capacity(manifest.entries.len());
 
-/*
-    let mut active_identities: Vec<String> = Vec::new(); //with_capacity(manifest.entries.len() * 16);
+    let records: Arc<RwLock<Vec<TextureRecord>>> = Arc::new(RwLock::new(Vec::new()));
+
+    // Populate records from entries
+    if manifest.entries.len() > 0 {
+        let mut records = records.write().unwrap();
+        for entry in &manifest.entries {
+            let input_path = Path::new(&entry.file);
+            let input_identity = compute_file_identity(&input_path).unwrap();
+            active_identities.push(input_identity.clone());
+            println!("name: {}, identity: {}", entry.name, input_identity);
+            records.push(TextureRecord {
+                entry: entry.clone(),
+                input_identity,
+                output_identity: None,
+            });
+        }
+    }
 
     // Remove multiple references to the same file (for efficiency).
     active_identities.sort_by(|a, b| a.cmp(&b));
@@ -229,8 +244,7 @@ fn process() -> Result<()> {
         }
     }
 
-    let records: Arc<RwLock<Vec<TextureRecord>>> = Arc::new(RwLock::new(Vec::new()));
-
+    /*
     // DO STUFF
 
     if process_opt.download || (process_opt.output.is_some() && process_opt.embed) {
@@ -300,8 +314,7 @@ fn process() -> Result<()> {
             manifest_writer.write_all(&manifest_data)?;
         }
     */
-
-*/
+    */
 
     Ok(())
 }

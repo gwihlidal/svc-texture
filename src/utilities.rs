@@ -1,3 +1,5 @@
+#![allow(unused_imports)]
+
 use filebuffer::FileBuffer;
 use std::env;
 use std::fs::File;
