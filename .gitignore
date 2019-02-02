@@ -10,3 +10,4 @@ logs/
 *.env
 **/*.rs.bk
 **/*.DS_Store
+tests/bistro
