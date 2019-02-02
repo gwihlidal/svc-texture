@@ -5,10 +5,7 @@ fn main() {
 }
 
 fn build_proto() {
-    let proto_files = &[
-        "proto/common.proto",
-        "proto/service.proto",
-    ];
+    let proto_files = &["proto/common.proto", "proto/service.proto"];
     let proto_dirs = &["proto"];
 
     tower_grpc_build::Config::new()

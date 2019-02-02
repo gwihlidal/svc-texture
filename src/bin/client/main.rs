@@ -12,18 +12,18 @@ extern crate chrono;
 extern crate fern;
 extern crate flatbuffers;
 
+use scoped_threadpool::Pool;
 use std::fs::File;
 use std::io::{BufWriter, Write};
 use std::path::Path;
 use std::path::PathBuf;
-use scoped_threadpool::Pool;
 use structopt::StructOpt;
 use svc_texture::client::transport;
 use svc_texture::compile::*;
 //use svc_texture::encoding::{decode_data, encode_data, Encoding};
-use svc_texture::error::{/*Error,*/ Result};
+use std::sync::{Arc, RwLock};
+use svc_texture::error::Result;
 use svc_texture::utilities::{/*self,*/ path_exists, read_file};
-use std::sync::{RwLock, Arc};
 
 mod generated;
 //use crate::generated::service::texture::schema;
@@ -190,7 +190,7 @@ fn process() -> Result<()> {
     // Load texture manifest from toml path
     let _manifest = load_manifest(&process_opt.input.as_path())?;
 
-    let mut active_identities: Vec<String> = Vec::new();//with_capacity(manifest.entries.len() * 16);
+    let mut active_identities: Vec<String> = Vec::new(); //with_capacity(manifest.entries.len() * 16);
 
     // Remove multiple references to the same file (for efficiency).
     active_identities.sort_by(|a, b| a.cmp(&b));
@@ -206,9 +206,10 @@ fn process() -> Result<()> {
                 let config = config.clone();
                 scoped.execute(move || {
                     info!("Uploading missing identity: {}", missing_identity);
-                    let identity_data = fetch_from_cache(cache_path, &missing_identity).unwrap();//?;
+                    let identity_data = fetch_from_cache(cache_path, &missing_identity).unwrap(); //?;
                     let uploaded_identity =
-                        transport::upload_identity(&config, &missing_identity, &identity_data).unwrap();//?;
+                        transport::upload_identity(&config, &missing_identity, &identity_data)
+                            .unwrap(); //?;
                     assert_eq!(missing_identity, &uploaded_identity);
                 });
             }
@@ -247,53 +248,53 @@ fn process() -> Result<()> {
         }
     }
 
-/*
-    if let Some(ref output_path) = process_opt.output {
-        let records = records.read().unwrap();
-        let mut manifest_builder = flatbuffers::FlatBufferBuilder::new();
-        let manifest_textures: Vec<_> = records
-            .iter()
-            .map(|texture| {
-                let artifact = &texture.artifact;
-                let name = Some(manifest_builder.create_string(&texture.name));
-                let entry = Some(manifest_builder.create_string(&texture.entry));
-                let name = Some(manifest_builder.create_string(&artifact.name));
-                let identity = Some(manifest_builder.create_string(&artifact.identity));
-                let encoding = Some(manifest_builder.create_string(&artifact.encoding));
-                let data = if process_opt.embed {
-                    let data = fetch_from_cache(cache_path, &artifact.identity)
-                        .expect("failed to fetch from cache");
-                    Some(manifest_builder.create_vector(&data))
-                } else {
-                    None
-                };
-                schema::Artifact::create(
-                    &mut manifest_builder,
-                    &schema::ArtifactArgs {
-                        name,
-                        identity,
-                        encoding,
-                        data,
-                    },
-                )
-            })
-            .collect();
+    /*
+        if let Some(ref output_path) = process_opt.output {
+            let records = records.read().unwrap();
+            let mut manifest_builder = flatbuffers::FlatBufferBuilder::new();
+            let manifest_textures: Vec<_> = records
+                .iter()
+                .map(|texture| {
+                    let artifact = &texture.artifact;
+                    let name = Some(manifest_builder.create_string(&texture.name));
+                    let entry = Some(manifest_builder.create_string(&texture.entry));
+                    let name = Some(manifest_builder.create_string(&artifact.name));
+                    let identity = Some(manifest_builder.create_string(&artifact.identity));
+                    let encoding = Some(manifest_builder.create_string(&artifact.encoding));
+                    let data = if process_opt.embed {
+                        let data = fetch_from_cache(cache_path, &artifact.identity)
+                            .expect("failed to fetch from cache");
+                        Some(manifest_builder.create_vector(&data))
+                    } else {
+                        None
+                    };
+                    schema::Artifact::create(
+                        &mut manifest_builder,
+                        &schema::ArtifactArgs {
+                            name,
+                            identity,
+                            encoding,
+                            data,
+                        },
+                    )
+                })
+                .collect();
 
-        let manifest_textures = Some(manifest_builder.create_vector(&manifest_textures));
-        let manifest = schema::Manifest::create(
-            &mut manifest_builder,
-            &schema::ManifestArgs {
-                textures: manifest_textures,
-            },
-        );
+            let manifest_textures = Some(manifest_builder.create_vector(&manifest_textures));
+            let manifest = schema::Manifest::create(
+                &mut manifest_builder,
+                &schema::ManifestArgs {
+                    textures: manifest_textures,
+                },
+            );
 
-        manifest_builder.finish(manifest, None);
-        let manifest_data = manifest_builder.finished_data();
-        let manifest_file = File::create(output_path)?;
-        let mut manifest_writer = BufWriter::new(manifest_file);
-        manifest_writer.write_all(&manifest_data)?;
-    }
-*/
+            manifest_builder.finish(manifest, None);
+            let manifest_data = manifest_builder.finished_data();
+            let manifest_file = File::create(output_path)?;
+            let mut manifest_writer = BufWriter::new(manifest_file);
+            manifest_writer.write_all(&manifest_data)?;
+        }
+    */
 
     Ok(())
 }
