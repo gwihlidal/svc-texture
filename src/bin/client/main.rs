@@ -160,43 +160,6 @@ struct TextureRecord {
     output_identity: Option<String>,
 }
 
-#[derive(Clone, Debug)]
-pub enum OutputFormat {
-    Bc1,
-    Bc2,
-    Bc3,
-    Bc4,
-    Bc5,
-    Bc6h,
-    Bc7,
-}
-
-fn guess_format(color_type: image::ColorType) -> (OutputFormat, bool /* alpha */) {
-    // http://www.reedbeta.com/blog/understanding-bcn-texture-compression-formats/
-    match color_type {
-        image::ColorType::Gray(ref _bit_depth) => (OutputFormat::Bc4, false),
-        image::ColorType::GrayA(ref _bit_depth) => (OutputFormat::Bc4, true),
-        image::ColorType::RGB(ref _bit_depth) => {
-            //OutputFormat::Bc1
-            (OutputFormat::Bc7, false)
-        }
-        image::ColorType::RGBA(ref _bit_depth) => {
-            //OutputFormat::Bc3
-            (OutputFormat::Bc7, true)
-        }
-        image::ColorType::BGRA(ref _bit_depth) => {
-            //OutputFormat::Bc3
-            (OutputFormat::Bc7, true)
-        }
-        image::ColorType::BGR(ref _bit_depth) => (OutputFormat::Bc1, false),
-        image::ColorType::Palette(ref _bit_depth) => unimplemented!(),
-    }
-}
-
-fn calculate_mip_count(width: u32, height: u32) -> u32 {
-    1 + (std::cmp::max(width, height) as f32).log2().floor() as u32
-}
-
 fn process() -> Result<()> {
     std::env::set_var("RUST_BACKTRACE", "1");
 
@@ -287,165 +250,26 @@ fn process() -> Result<()> {
     }
     */
 
-    let min_width = 4;
-    let min_height = 4;
-
     {
         let mut records = records.write().unwrap();
         for record in &mut *records {
             let input_image = image::open(&Path::new(&record.entry.file)).unwrap();
-            let (width, height) = input_image.dimensions();
-            let color_type = input_image.color();
-            let (output_format, has_alpha) = guess_format(color_type);
-            println!("ColorType is {:?}", color_type);
-            println!("OutputFormat: {:?}", output_format);
-            println!("Mip[0] Width is {}", width);
-            println!("Mip[0] Height is {}", height);
-            match color_type {
-                image::ColorType::Gray(ref bit_depth) => {
-                    println!("Pixel is gray scale, bit depth is {}", bit_depth);
-                    // BC4
-                }
-                image::ColorType::GrayA(ref bit_depth) => {
-                    println!(
-                        "Pixel is gray scale with an alpha channel, bit depth is {}",
-                        bit_depth
-                    );
-                }
-                image::ColorType::RGB(ref bit_depth) => {
-                    println!(
-                        "Pixel contains R, G and B channels, bit depth is {}",
-                        bit_depth
-                    );
-                    // BC1
-                }
-                image::ColorType::RGBA(ref bit_depth) => {
-                    println!(
-                        "Pixel is RGB with an alpha channel, bit depth is {}",
-                        bit_depth
-                    );
-                    // BC3 or BC2 (old)
-                }
-                image::ColorType::BGRA(ref bit_depth) => {
-                    println!(
-                        "Pixel is BGR with an alpha channel, bit depth is {}",
-                        bit_depth
-                    );
-                    // BC3 or BC2 (old)
-                }
-                image::ColorType::BGR(ref bit_depth) => {
-                    println!(
-                        "Pixel contains B, G and R channels, bit depth is {}",
-                        bit_depth
-                    );
-                    // BC1
-                }
-                image::ColorType::Palette(ref bit_depth) => {
-                    println!(
-                        "Pixel is an index into a color palette, bit depth is {}",
-                        bit_depth
-                    );
-                }
-            }
 
-            let generate_mips = true;
-            let mip_count = if generate_mips {
-                calculate_mip_count(width, height)
+            let images = if record.entry.mips {
+                generate_mips(input_image, image::FilterType::Lanczos3, Some((4, 4)))
             } else {
-                1
+                vec![input_image]
             };
 
-            let mut images: Vec<image::DynamicImage> = Vec::with_capacity(mip_count as usize);
-            images.push(input_image);
-
-            for i in 1..mip_count {
-                // Get mip map dimensions
-                let dst_width = width >> i;
-                let dst_height = height >> i;
-                if dst_width < min_width || dst_height < min_height {
-                    break;
-                }
-
-                let src_image = &images[i as usize - 1];
-
-                let dst_image = src_image.resize(dst_width, dst_height, FilterType::Lanczos3);
-
-                let block_count = intel_tex::divide_up_by_multiple(dst_width * dst_height, 16);
-                println!("Block count: {}", block_count);
-
-                let (width, height) = dst_image.dimensions();
-                println!("Mip[{}] Width is {}", i, width);
-                println!("Mip[{}] Height is {}", i, height);
-
-                images.push(dst_image);
-            }
-
-            println!("Mip count: {}", images.len());
-
-            let mip_count = images.len();
-            let array_layers = 1;
-            let caps2 = Caps2::empty();
-            let is_cubemap = false;
-            let resource_dimension = D3D10ResourceDimension::Texture2D;
-            let alpha_mode = if has_alpha {
-                AlphaMode::Straight
-            } else {
-                AlphaMode::Opaque
+            let output_format = parse_output_format(&record.entry.format);
+            let output_data = match output_format {
+                OutputFormat::Bc3 => bcn::compress_bc3_2d(&images),
+                OutputFormat::Bc7 => bcn::compress_bc7_2d(&images, Bc7Quality::Basic),
+                _ => unimplemented!(),
             };
-            let depth = 1;
 
-            let mut dds = Dds::new_dxgi(
-                height,
-                width,
-                Some(depth),
-                DxgiFormat::BC7_UNorm,
-                Some(mip_count as u32),
-                Some(array_layers),
-                Some(caps2),
-                is_cubemap,
-                resource_dimension,
-                alpha_mode,
-            )
-            .unwrap();
-
-            let layer_data = dds.get_mut_data(0 /* layer */).unwrap();
-
-            let mut start_offset = 0;
-            for i in 0..mip_count {
-                let rgba_image = images[i].to_rgba();
-                let (width, height) = rgba_image.dimensions();
-
-                let mip_size = intel_tex::bc7::calc_output_size(width, height);
-                let mut mip_data = &mut layer_data[start_offset..(start_offset + mip_size)];
-
-                let surface = intel_tex::RgbaSurface {
-                    width,
-                    height,
-                    stride: width * 4,
-                    data: &rgba_image,
-                };
-
-                println!("Compressing mip[{}] to BC7...", i);
-                bc7::compress_blocks_into(
-                    &bc7::opaque_ultra_fast_settings(),
-                    &surface,
-                    &mut mip_data,
-                );
-
-                start_offset += mip_size;
-            }
-
-            let mut dds_memory = std::io::Cursor::new(Vec::<u8>::new());
-            dds.write(&mut dds_memory)
-                .expect("Failed to write dds memory");
-
-            let output_identity = compute_identity(dds_memory.get_ref());
-
-            println!("  Done!");
-
-            println!("Saving dds file");
-            cache_if_missing(cache_path, &output_identity, &dds_memory.get_ref())?;
-
+            let output_identity = compute_identity(&output_data);
+            cache_if_missing(cache_path, &output_identity, &output_data)?;
             record.output_identity = Some(output_identity);
         }
     }
@@ -574,7 +398,7 @@ fn setup_logging(verbosity: u64) -> Result<()> {
                 .create(true)
                 //.append(true)
                 .truncate(true)
-                .open("logs/compile.log")?,
+                .open("logs/client.log")?,
         );
 
     let stdout_config = fern::Dispatch::new()

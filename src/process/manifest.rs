@@ -40,3 +40,11 @@ pub fn parse_manifest(manifest_toml: &str) -> Result<TextureManifest> {
     manifest.validate()?;
     Ok(manifest)
 }
+
+pub fn parse_output_format(format: &str) -> super::OutputFormat {
+    match format {
+        "bc3" => super::OutputFormat::Bc3,
+        "bc7" => super::OutputFormat::Bc7,
+        _ => unimplemented!(),
+    }
+}
