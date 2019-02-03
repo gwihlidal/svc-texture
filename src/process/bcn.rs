@@ -75,7 +75,7 @@ pub fn compress_bc3_2d(images: &Vec<image::DynamicImage>) -> Vec<u8> {
         height,
         width,
         Some(depth),
-        DxgiFormat::BC7_UNorm,
+        DxgiFormat::BC3_UNorm,
         Some(mip_count as u32),
         Some(array_layers),
         Some(caps2),
@@ -92,7 +92,7 @@ pub fn compress_bc3_2d(images: &Vec<image::DynamicImage>) -> Vec<u8> {
         let rgba_image = images[i].to_rgba();
         let (width, height) = rgba_image.dimensions();
 
-        let mip_size = intel_tex::bc7::calc_output_size(width, height);
+        let mip_size = intel_tex::bc3::calc_output_size(width, height);
         let mut mip_data = &mut layer_data[start_offset..(start_offset + mip_size)];
 
         let surface = intel_tex::RgbaSurface {
