@@ -263,6 +263,7 @@ fn process() -> Result<()> {
 
             let output_format = parse_output_format(&record.entry.format);
             let output_data = match output_format {
+                OutputFormat::Bc1 => bcn::compress_bc1_2d(&images),
                 OutputFormat::Bc3 => bcn::compress_bc3_2d(&images),
                 OutputFormat::Bc7 => bcn::compress_bc7_2d(&images, Bc7Quality::Basic),
                 _ => unimplemented!(),

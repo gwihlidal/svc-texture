@@ -56,6 +56,64 @@ pub fn guess_format(color_type: image::ColorType) -> (OutputFormat, bool /* alph
     }
 }
 
+pub fn compress_bc1_2d(images: &Vec<image::DynamicImage>) -> Vec<u8> {
+    if images.len() == 0 {
+        return Vec::new();
+    }
+
+    let top_level = &images[0];
+    let (width, height) = top_level.dimensions();
+
+    let mip_count = images.len();
+    let array_layers = 1;
+    let caps2 = Caps2::empty();
+    let is_cubemap = false;
+    let resource_dimension = D3D10ResourceDimension::Texture2D;
+    let depth = 1;
+
+    let mut dds = Dds::new_dxgi(
+        height,
+        width,
+        Some(depth),
+        DxgiFormat::BC1_UNorm,
+        Some(mip_count as u32),
+        Some(array_layers),
+        Some(caps2),
+        is_cubemap,
+        resource_dimension,
+        AlphaMode::Opaque,
+    )
+    .unwrap();
+
+    let layer_data = dds.get_mut_data(0 /* layer */).unwrap();
+
+    let mut start_offset = 0;
+    for i in 0..mip_count {
+        let rgba_image = images[i].to_rgba();
+        let (width, height) = rgba_image.dimensions();
+
+        let mip_size = intel_tex::bc1::calc_output_size(width, height);
+        let mut mip_data = &mut layer_data[start_offset..(start_offset + mip_size)];
+
+        let surface = intel_tex::RgbaSurface {
+            width,
+            height,
+            stride: width * 4,
+            data: &rgba_image,
+        };
+
+        bc1::compress_blocks_into(&surface, &mut mip_data);
+
+        start_offset += mip_size;
+    }
+
+    let mut dds_memory = std::io::Cursor::new(Vec::<u8>::new());
+    dds.write(&mut dds_memory)
+        .expect("Failed to write dds memory");
+
+    dds_memory.into_inner()
+}
+
 pub fn compress_bc3_2d(images: &Vec<image::DynamicImage>) -> Vec<u8> {
     if images.len() == 0 {
         return Vec::new();
