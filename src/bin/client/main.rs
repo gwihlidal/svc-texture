@@ -11,10 +11,10 @@ extern crate yansi;
 #[macro_use]
 extern crate log;
 extern crate chrono;
+extern crate ddsfile;
 extern crate fern;
 extern crate flatbuffers;
 extern crate image;
-extern crate ddsfile;
 
 use scoped_threadpool::Pool;
 use std::fs::File;
@@ -25,9 +25,17 @@ use structopt::StructOpt;
 use svc_texture::client::transport;
 use svc_texture::compile::*;
 //use svc_texture::encoding::{decode_data, encode_data, Encoding};
+use ddsfile::{AlphaMode, Caps2, D3D10ResourceDimension, Dds, DxgiFormat};
+use image::FilterType;
+use image::GenericImageView;
+use image::ImageBuffer;
+use image::Pixel;
+use intel_tex::bc7;
 use std::sync::{Arc, RwLock};
 use svc_texture::error::Result;
-use svc_texture::utilities::{compute_file_identity, /*self,*/ path_exists, read_file};
+use svc_texture::utilities::{
+    compute_file_identity, compute_identity, /*self,*/ path_exists, read_file,
+};
 
 mod generated;
 //use crate::generated::service::texture::schema;
@@ -158,6 +166,43 @@ struct TextureRecord {
     output_identity: Option<String>,
 }
 
+#[derive(Clone, Debug)]
+pub enum OutputFormat {
+    Bc1,
+    Bc2,
+    Bc3,
+    Bc4,
+    Bc5,
+    Bc6h,
+    Bc7,
+}
+
+fn guess_format(color_type: image::ColorType) -> (OutputFormat, bool /* alpha */) {
+    // http://www.reedbeta.com/blog/understanding-bcn-texture-compression-formats/
+    match color_type {
+        image::ColorType::Gray(ref _bit_depth) => (OutputFormat::Bc4, false),
+        image::ColorType::GrayA(ref _bit_depth) => (OutputFormat::Bc4, true),
+        image::ColorType::RGB(ref _bit_depth) => {
+            //OutputFormat::Bc1
+            (OutputFormat::Bc7, false)
+        }
+        image::ColorType::RGBA(ref _bit_depth) => {
+            //OutputFormat::Bc3
+            (OutputFormat::Bc7, true)
+        }
+        image::ColorType::BGRA(ref _bit_depth) => {
+            //OutputFormat::Bc3
+            (OutputFormat::Bc7, true)
+        }
+        image::ColorType::BGR(ref _bit_depth) => (OutputFormat::Bc1, false),
+        image::ColorType::Palette(ref _bit_depth) => unimplemented!(),
+    }
+}
+
+fn calculate_mip_count(width: u32, height: u32) -> u32 {
+    1 + (std::cmp::max(width, height) as f32).log2().floor() as u32
+}
+
 fn process() -> Result<()> {
     std::env::set_var("RUST_BACKTRACE", "1");
 
@@ -248,84 +293,260 @@ fn process() -> Result<()> {
     }
     */
 
+    let min_width = 4;
+    let min_height = 4;
+
     {
         let mut records = records.write().unwrap();
-        for record in &*records {
-            //
-        }
-    }
+        for record in &mut *records {
+            let input_image = image::open(&Path::new(&record.entry.file)).unwrap();
+            let (width, height) = input_image.dimensions();
+            let color_type = input_image.color();
+            let (output_format, has_alpha) = guess_format(color_type);
+            println!("ColorType is {:?}", color_type);
+            println!("OutputFormat: {:?}", output_format);
+            println!("Mip[0] Width is {}", width);
+            println!("Mip[0] Height is {}", height);
+            match color_type {
+                image::ColorType::Gray(ref bit_depth) => {
+                    println!("Pixel is gray scale, bit depth is {}", bit_depth);
+                    // BC4
+                }
+                image::ColorType::GrayA(ref bit_depth) => {
+                    println!(
+                        "Pixel is gray scale with an alpha channel, bit depth is {}",
+                        bit_depth
+                    );
+                }
+                image::ColorType::RGB(ref bit_depth) => {
+                    println!(
+                        "Pixel contains R, G and B channels, bit depth is {}",
+                        bit_depth
+                    );
+                    // BC1
+                }
+                image::ColorType::RGBA(ref bit_depth) => {
+                    println!(
+                        "Pixel is RGB with an alpha channel, bit depth is {}",
+                        bit_depth
+                    );
+                    // BC3 or BC2 (old)
+                }
+                image::ColorType::BGRA(ref bit_depth) => {
+                    println!(
+                        "Pixel is BGR with an alpha channel, bit depth is {}",
+                        bit_depth
+                    );
+                    // BC3 or BC2 (old)
+                }
+                image::ColorType::BGR(ref bit_depth) => {
+                    println!(
+                        "Pixel contains B, G and R channels, bit depth is {}",
+                        bit_depth
+                    );
+                    // BC1
+                }
+                image::ColorType::Palette(ref bit_depth) => {
+                    println!(
+                        "Pixel is an index into a color palette, bit depth is {}",
+                        bit_depth
+                    );
+                }
+            }
 
-    /*
-    // DO STUFF
-
-    if process_opt.download || (process_opt.output.is_some() && process_opt.embed) {
-        let records = records.read().unwrap();
-        for record in &*records {
-            let identity_path = cache_path.join(&record.artifact.identity);
-            if cache_miss(cache_path, &record.artifact.identity) {
-                let remote_data = transport::download_identity(&config, &record.artifact.identity)?;
-                cache_if_missing(cache_path, &record.artifact.identity, &remote_data)?;
-                debug!(
-                    "  '{}' [Cache Miss]: {:?}",
-                    record.artifact.name, identity_path
-                );
+            let generate_mips = true;
+            let mip_count = if generate_mips {
+                calculate_mip_count(width, height)
             } else {
-                debug!(
-                    "  '{}' [Cache Hit]: {:?}",
-                    record.artifact.name, identity_path
+                1
+            };
+
+            let mut images: Vec<image::DynamicImage> = Vec::with_capacity(mip_count as usize);
+            images.push(input_image);
+
+            for i in 1..mip_count {
+                // Get mip map dimensions
+                let dst_width = width >> i;
+                let dst_height = height >> i;
+                if dst_width < min_width || dst_height < min_height {
+                    break;
+                }
+
+                let src_image = &images[i as usize - 1];
+
+                let dst_image = src_image.resize(dst_width, dst_height, FilterType::Lanczos3);
+
+                let block_count = intel_tex::divide_up_by_multiple(dst_width * dst_height, 16);
+                println!("Block count: {}", block_count);
+
+                let (width, height) = dst_image.dimensions();
+                println!("Mip[{}] Width is {}", i, width);
+                println!("Mip[{}] Height is {}", i, height);
+
+                images.push(dst_image);
+            }
+
+            println!("Mip count: {}", images.len());
+
+            let mip_count = images.len();
+            let array_layers = 1;
+            let caps2 = Caps2::empty();
+            let is_cubemap = false;
+            let resource_dimension = D3D10ResourceDimension::Texture2D;
+            let alpha_mode = if has_alpha {
+                AlphaMode::Straight
+            } else {
+                AlphaMode::Opaque
+            };
+            let depth = 1;
+
+            let mut dds = Dds::new_dxgi(
+                height,
+                width,
+                Some(depth),
+                DxgiFormat::BC7_UNorm,
+                Some(mip_count as u32),
+                Some(array_layers),
+                Some(caps2),
+                is_cubemap,
+                resource_dimension,
+                alpha_mode,
+            )
+            .unwrap();
+
+            let layer_data = dds.get_mut_data(0 /* layer */).unwrap();
+
+            for i in 0..mip_count {
+                let start_offset = if i > 0 {
+                    let (width, height) = images[i - 1].dimensions();
+                    intel_tex::bc7::calc_output_size(width, height)
+                } else {
+                    0
+                };
+
+                /*let mut rgba_img = ImageBuffer::new(width, height);
+
+                println!("Converting RGB -> RGBA"); // could be optimized
+                for x in (0_u32..width).into_iter() {
+                    for y in (0_u32..height).into_iter() {
+                        let pixel = input_image.get_pixel(x, y);
+                        let pixel_rgba = pixel.to_rgba();
+                        rgba_img.put_pixel(x, y, pixel_rgba);
+                    }
+                }*/
+
+                let rgba_image = images[i].to_rgba();
+                let (width, height) = rgba_image.dimensions();
+
+                let mip_size = intel_tex::bc7::calc_output_size(width, height);
+                let mut mip_data = &mut layer_data[start_offset..(start_offset + mip_size)];
+
+                let surface = intel_tex::RgbaSurface {
+                    width,
+                    height,
+                    stride: width * 4,
+                    data: &rgba_image,
+                };
+
+                println!("Compressing mip[{}] to BC7...", i);
+                bc7::compress_blocks_into(
+                    &bc7::opaque_ultra_fast_settings(),
+                    &surface,
+                    &mut mip_data,
                 );
             }
+
+            let mut dds_memory = std::io::Cursor::new(Vec::<u8>::new());
+            dds.write(&mut dds_memory)
+                .expect("Failed to write dds memory");
+
+            let output_identity = compute_identity(dds_memory.get_ref());
+
+            println!("  Done!");
+
+            println!("Saving dds file");
+            cache_if_missing(cache_path, &output_identity, &dds_memory.get_ref())?;
+
+            record.output_identity = Some(output_identity);
         }
     }
 
     /*
-        if let Some(ref output_path) = process_opt.output {
+        // DO STUFF
+
+        if process_opt.download || (process_opt.output.is_some() && process_opt.embed) {
             let records = records.read().unwrap();
-            let mut manifest_builder = flatbuffers::FlatBufferBuilder::new();
-            let manifest_textures: Vec<_> = records
-                .iter()
-                .map(|texture| {
-                    let artifact = &texture.artifact;
-                    let name = Some(manifest_builder.create_string(&texture.name));
-                    let entry = Some(manifest_builder.create_string(&texture.entry));
-                    let name = Some(manifest_builder.create_string(&artifact.name));
-                    let identity = Some(manifest_builder.create_string(&artifact.identity));
-                    let encoding = Some(manifest_builder.create_string(&artifact.encoding));
-                    let data = if process_opt.embed {
-                        let data = fetch_from_cache(cache_path, &artifact.identity)
-                            .expect("failed to fetch from cache");
-                        Some(manifest_builder.create_vector(&data))
-                    } else {
-                        None
-                    };
-                    schema::Artifact::create(
-                        &mut manifest_builder,
-                        &schema::ArtifactArgs {
-                            name,
-                            identity,
-                            encoding,
-                            data,
-                        },
-                    )
-                })
-                .collect();
-
-            let manifest_textures = Some(manifest_builder.create_vector(&manifest_textures));
-            let manifest = schema::Manifest::create(
-                &mut manifest_builder,
-                &schema::ManifestArgs {
-                    textures: manifest_textures,
-                },
-            );
-
-            manifest_builder.finish(manifest, None);
-            let manifest_data = manifest_builder.finished_data();
-            let manifest_file = File::create(output_path)?;
-            let mut manifest_writer = BufWriter::new(manifest_file);
-            manifest_writer.write_all(&manifest_data)?;
+            for record in &*records {
+                let identity_path = cache_path.join(&record.artifact.identity);
+                if cache_miss(cache_path, &record.artifact.identity) {
+                    let remote_data = transport::download_identity(&config, &record.artifact.identity)?;
+                    cache_if_missing(cache_path, &record.artifact.identity, &remote_data)?;
+                    debug!(
+                        "  '{}' [Cache Miss]: {:?}",
+                        record.artifact.name, identity_path
+                    );
+                } else {
+                    debug!(
+                        "  '{}' [Cache Hit]: {:?}",
+                        record.artifact.name, identity_path
+                    );
+                }
+            }
         }
+
     */
-    */
+
+    {
+        let records = records.read().unwrap();
+        println!("Records: {:?}", records);
+    }
+
+    if let Some(ref output_path) = process_opt.output {
+        let records = records.read().unwrap();
+        println!("Records: {:?}", records);
+        /*let mut manifest_builder = flatbuffers::FlatBufferBuilder::new();
+        let manifest_textures: Vec<_> = records
+            .iter()
+            .map(|texture| {
+                let artifact = &texture.artifact;
+                let name = Some(manifest_builder.create_string(&texture.name));
+                let entry = Some(manifest_builder.create_string(&texture.entry));
+                let name = Some(manifest_builder.create_string(&artifact.name));
+                let identity = Some(manifest_builder.create_string(&artifact.identity));
+                let encoding = Some(manifest_builder.create_string(&artifact.encoding));
+                let data = if process_opt.embed {
+                    let data = fetch_from_cache(cache_path, &artifact.identity)
+                        .expect("failed to fetch from cache");
+                    Some(manifest_builder.create_vector(&data))
+                } else {
+                    None
+                };
+                schema::Artifact::create(
+                    &mut manifest_builder,
+                    &schema::ArtifactArgs {
+                        name,
+                        identity,
+                        encoding,
+                        data,
+                    },
+                )
+            })
+            .collect();
+
+        let manifest_textures = Some(manifest_builder.create_vector(&manifest_textures));
+        let manifest = schema::Manifest::create(
+            &mut manifest_builder,
+            &schema::ManifestArgs {
+                textures: manifest_textures,
+            },
+        );
+
+        manifest_builder.finish(manifest, None);
+        let manifest_data = manifest_builder.finished_data();
+        let manifest_file = File::create(output_path)?;
+        let mut manifest_writer = BufWriter::new(manifest_file);
+        manifest_writer.write_all(&manifest_data)?;*/
+    }
 
     Ok(())
 }

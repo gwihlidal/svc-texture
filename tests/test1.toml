@@ -3,3 +3,9 @@ name = "sponza_arch_diff"
 file = "tests/sponza/sponza_arch_diff.png"
 format = "bc7"
 mips = true
+
+[[entries]]
+name = "sponza_details_diff"
+file = "tests/sponza/sponza_details_diff.png"
+format = "bc7"
+mips = true
