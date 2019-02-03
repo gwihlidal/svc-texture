@@ -45,6 +45,7 @@ pub fn parse_output_format(format: &str) -> super::OutputFormat {
     match format {
         "bc1" => super::OutputFormat::Bc1,
         "bc3" => super::OutputFormat::Bc3,
+        "bc6h" => super::OutputFormat::Bc6h,
         "bc7" => super::OutputFormat::Bc7,
         _ => unimplemented!(),
     }

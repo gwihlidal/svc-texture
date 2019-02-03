@@ -265,6 +265,7 @@ fn process() -> Result<()> {
             let output_data = match output_format {
                 OutputFormat::Bc1 => bcn::compress_bc1_2d(&images),
                 OutputFormat::Bc3 => bcn::compress_bc3_2d(&images),
+                OutputFormat::Bc6h => bcn::compress_bc6h_2d(&images, Bc6hQuality::Basic),
                 OutputFormat::Bc7 => bcn::compress_bc7_2d(&images, Bc7Quality::Basic),
                 _ => unimplemented!(),
             };

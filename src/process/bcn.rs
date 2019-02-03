@@ -6,12 +6,28 @@ use image::ImageBuffer;
 use image::Pixel;
 use intel_tex::*;
 
+pub enum Bc6hQuality {
+    VeryFast,
+    Basic,
+    Slow,
+    VerySlow,
+}
+
 pub enum Bc7Quality {
     UltraFast,
     VeryFast,
     Fast,
     Basic,
     Slow,
+}
+
+pub fn get_bc6h_settings(quality: Bc6hQuality) -> bc6h::EncodeSettings {
+    match quality {
+        Bc6hQuality::VeryFast => bc6h::very_fast_settings(),
+        Bc6hQuality::Basic => bc6h::basic_settings(),
+        Bc6hQuality::Slow => bc6h::slow_settings(),
+        Bc6hQuality::VerySlow => bc6h::very_slow_settings(),
+    }
 }
 
 pub fn get_bc7_settings(quality: Bc7Quality, alpha: bool) -> bc7::EncodeSettings {
@@ -161,6 +177,71 @@ pub fn compress_bc3_2d(images: &Vec<image::DynamicImage>) -> Vec<u8> {
         };
 
         bc3::compress_blocks_into(&surface, &mut mip_data);
+
+        start_offset += mip_size;
+    }
+
+    let mut dds_memory = std::io::Cursor::new(Vec::<u8>::new());
+    dds.write(&mut dds_memory)
+        .expect("Failed to write dds memory");
+
+    dds_memory.into_inner()
+}
+
+pub fn compress_bc6h_2d(images: &Vec<image::DynamicImage>, quality: Bc6hQuality) -> Vec<u8> {
+    if images.len() == 0 {
+        return Vec::new();
+    }
+
+    let top_level = &images[0];
+
+    let bc6h_settings = get_bc6h_settings(quality);
+
+    let (width, height) = top_level.dimensions();
+
+    let mip_count = images.len();
+    let array_layers = 1;
+    let caps2 = Caps2::empty();
+    let is_cubemap = false;
+    let resource_dimension = D3D10ResourceDimension::Texture2D;
+    let depth = 1;
+
+    //BC6H_Typeless,
+    //BC6H_UF16,
+    //BC6H_SF16,
+
+    let mut dds = Dds::new_dxgi(
+        height,
+        width,
+        Some(depth),
+        DxgiFormat::BC6H_SF16,
+        Some(mip_count as u32),
+        Some(array_layers),
+        Some(caps2),
+        is_cubemap,
+        resource_dimension,
+        AlphaMode::Opaque,
+    )
+    .unwrap();
+
+    let layer_data = dds.get_mut_data(0 /* layer */).unwrap();
+
+    let mut start_offset = 0;
+    for i in 0..mip_count {
+        let rgba_image = images[i].to_rgba();
+        let (width, height) = rgba_image.dimensions();
+
+        let mip_size = intel_tex::bc6h::calc_output_size(width, height);
+        let mut mip_data = &mut layer_data[start_offset..(start_offset + mip_size)];
+
+        let surface = intel_tex::RgbaSurface {
+            width,
+            height,
+            stride: width * 4,
+            data: &rgba_image,
+        };
+
+        bc6h::compress_blocks_into(&bc6h_settings, &surface, &mut mip_data);
 
         start_offset += mip_size;
     }
