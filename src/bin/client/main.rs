@@ -416,25 +416,8 @@ fn process() -> Result<()> {
 
             let layer_data = dds.get_mut_data(0 /* layer */).unwrap();
 
+            let mut start_offset = 0;
             for i in 0..mip_count {
-                let start_offset = if i > 0 {
-                    let (width, height) = images[i - 1].dimensions();
-                    intel_tex::bc7::calc_output_size(width, height)
-                } else {
-                    0
-                };
-
-                /*let mut rgba_img = ImageBuffer::new(width, height);
-
-                println!("Converting RGB -> RGBA"); // could be optimized
-                for x in (0_u32..width).into_iter() {
-                    for y in (0_u32..height).into_iter() {
-                        let pixel = input_image.get_pixel(x, y);
-                        let pixel_rgba = pixel.to_rgba();
-                        rgba_img.put_pixel(x, y, pixel_rgba);
-                    }
-                }*/
-
                 let rgba_image = images[i].to_rgba();
                 let (width, height) = rgba_image.dimensions();
 
@@ -454,6 +437,8 @@ fn process() -> Result<()> {
                     &surface,
                     &mut mip_data,
                 );
+
+                start_offset += mip_size;
             }
 
             let mut dds_memory = std::io::Cursor::new(Vec::<u8>::new());
