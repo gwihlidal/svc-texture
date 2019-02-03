@@ -39,7 +39,7 @@ ENV PATH="/root/.cargo/bin:${PATH}"
 # Avoid having to install/build all dependencies when iterating
 # by copying the Cargo files and making dummy main source files
 COPY Cargo.* ./
-RUN mkdir -p src/bin/compile && echo "fn main() {}" > src/bin/compile/main.rs && \
+RUN mkdir -p src/bin/client && echo "fn main() {}" > src/bin/client/main.rs && \
 	mkdir -p src/bin/service && echo "fn main() {}" > src/bin/service/main.rs && \
 	echo "fn fake() {}" > src/lib.rs && \
 	echo "fn main() {}" > build.rs && \
@@ -52,7 +52,7 @@ COPY build.rs .
 
 # We need to touch our real source files or
 # else docker will use the cached ones.
-RUN touch src/bin/compile/main.rs && \
+RUN touch src/bin/client/main.rs && \
 	touch src/bin/service/main.rs && \
 	touch src/lib.rs && \
 	touch build.rs && \

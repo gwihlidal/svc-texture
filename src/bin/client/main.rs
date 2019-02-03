@@ -23,14 +23,8 @@ use std::path::Path;
 use std::path::PathBuf;
 use structopt::StructOpt;
 use svc_texture::client::transport;
-use svc_texture::compile::*;
+use svc_texture::process::*;
 //use svc_texture::encoding::{decode_data, encode_data, Encoding};
-use ddsfile::{AlphaMode, Caps2, D3D10ResourceDimension, Dds, DxgiFormat};
-use image::FilterType;
-use image::GenericImageView;
-use image::ImageBuffer;
-use image::Pixel;
-use intel_tex::bc7;
 use std::sync::{Arc, RwLock};
 use svc_texture::error::Result;
 use svc_texture::utilities::{

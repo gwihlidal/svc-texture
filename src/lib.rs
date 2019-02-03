@@ -57,10 +57,10 @@ pub mod gen {
 }
 
 pub mod client;
-pub mod compile;
 pub mod encoding;
 pub mod error;
 pub mod identity;
+pub mod process;
 pub mod utilities;
 
 pub use crate::error::{pretty_error, Error, ErrorKind, Result};

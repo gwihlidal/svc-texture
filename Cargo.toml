@@ -6,7 +6,7 @@ description = "A gRPC micro-service that exposes a texture compression and resam
 homepage = "https://github.com/gwihlidal/svc-texture"
 repository = "https://github.com/gwihlidal/svc-texture"
 readme = "README.md"
-keywords = ["grpc", "texture", "compile", "gpu", "pipeline"]
+keywords = ["grpc", "texture", "compress", "gpu", "pipeline"]
 license = "MIT/Apache-2.0"
 edition = "2018"
 
