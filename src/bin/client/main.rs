@@ -348,7 +348,11 @@ fn process() -> Result<()> {
                         elements: 1,
                     },
                 ));
-                let identity = record.output_identity.unwrap_or_default();
+                let identity = if let Some(ref identity) = record.output_identity {
+                    identity.to_owned()
+                } else {
+                    String::new()
+                };
                 let data = if process_opt.embed {
                     let data = fetch_from_cache(cache_path, &identity)
                         .expect("failed to fetch from cache");
