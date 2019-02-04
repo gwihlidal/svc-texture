@@ -260,8 +260,11 @@ fn process() -> Result<()> {
         for record in &mut *records {
             if record.entry.format == "dds" {
                 // Straight pass-through of dds blocks (with extracted header meta data)
-                let dds_data = fetch_from_cache(cache_path, &record.input_identity)
-                    .expect("failed to fetch from cache");
+                //let dds_data = fetch_from_cache(cache_path, &record.input_identity)
+                //    .expect("failed to fetch from cache");
+                let dds_data = read_file(&base_path.join(&record.entry.file)).unwrap();
+                let mut dds_data = std::io::Cursor::new(dds_data);
+                let (desc, data) = bcn::read_dds_result(&mut dds_data);
 
                 let output_identity = record.input_identity.to_owned();
                 assert!(cache_hit(cache_path, &output_identity));

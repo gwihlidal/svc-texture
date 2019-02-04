@@ -123,11 +123,7 @@ pub fn compress_bc1_2d(images: &Vec<image::DynamicImage>) -> Vec<u8> {
         start_offset += mip_size;
     }
 
-    let mut dds_memory = std::io::Cursor::new(Vec::<u8>::new());
-    dds.write(&mut dds_memory)
-        .expect("Failed to write dds memory");
-
-    dds_memory.into_inner()
+    serialize_dds_bytes(&dds)
 }
 
 pub fn compress_bc3_2d(images: &Vec<image::DynamicImage>) -> Vec<u8> {
@@ -181,11 +177,7 @@ pub fn compress_bc3_2d(images: &Vec<image::DynamicImage>) -> Vec<u8> {
         start_offset += mip_size;
     }
 
-    let mut dds_memory = std::io::Cursor::new(Vec::<u8>::new());
-    dds.write(&mut dds_memory)
-        .expect("Failed to write dds memory");
-
-    dds_memory.into_inner()
+    serialize_dds_bytes(&dds)
 }
 
 pub fn compress_bc6h_2d(images: &Vec<image::DynamicImage>, quality: Bc6hQuality) -> Vec<u8> {
@@ -246,11 +238,7 @@ pub fn compress_bc6h_2d(images: &Vec<image::DynamicImage>, quality: Bc6hQuality)
         start_offset += mip_size;
     }
 
-    let mut dds_memory = std::io::Cursor::new(Vec::<u8>::new());
-    dds.write(&mut dds_memory)
-        .expect("Failed to write dds memory");
-
-    dds_memory.into_inner()
+    serialize_dds_bytes(&dds)
 }
 
 pub fn compress_bc7_2d(images: &Vec<image::DynamicImage>, quality: Bc7Quality) -> Vec<u8> {
@@ -314,9 +302,43 @@ pub fn compress_bc7_2d(images: &Vec<image::DynamicImage>, quality: Bc7Quality) -
         start_offset += mip_size;
     }
 
+    serialize_dds_bytes(&dds)
+}
+
+pub fn serialize_dds_bytes(dds: &Dds) -> Vec<u8> {
     let mut dds_memory = std::io::Cursor::new(Vec::<u8>::new());
     dds.write(&mut dds_memory)
         .expect("Failed to write dds memory");
 
     dds_memory.into_inner()
+}
+
+pub fn read_dds_result<R: std::io::Read>(r: &mut R) -> (schema::TextureDescArgs, Vec<u8>) {
+    let dds = Dds::read(r).expect("failed to read dds");
+    extract_dds_result(&dds)
+}
+
+pub fn extract_dds_result(dds: &Dds) -> (schema::TextureDescArgs, Vec<u8>) {
+    //dds.get_format()
+    //dds.get_dxgi_format()
+    //dds.get_d3d_format()
+    //dds.data
+    //dds.get_num_mipmap_levels()
+    //dds.get_num_array_layers()
+    //dds.get_offset_and_size(array_layer: u32)
+    //dds.header10
+    //dds.get_data(array_layer: u32)
+    //dds.get_bits_per_pixel()
+    //dds.get_array_stride()
+    println!("DDS: {:?}", dds);
+    let desc = schema::TextureDescArgs {
+        type_: schema::TextureType::Tex2d,
+        format: schema::TextureFormat::BC7_UNORM,
+        width: dds.get_width(),
+        height: dds.get_height(),
+        depth: dds.get_depth(),
+        levels: 1,
+        elements: 1,
+    };
+    (desc, Vec::new())
 }
