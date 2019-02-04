@@ -331,30 +331,39 @@ fn process() -> Result<()> {
     if let Some(ref output_path) = process_opt.output {
         let records = records.read().unwrap();
         println!("Records: {:?}", records);
-        /*let mut manifest_builder = flatbuffers::FlatBufferBuilder::new();
+        let mut manifest_builder = flatbuffers::FlatBufferBuilder::new();
         let manifest_textures: Vec<_> = records
             .iter()
-            .map(|texture| {
-                let artifact = &texture.artifact;
-                let name = Some(manifest_builder.create_string(&texture.name));
-                let entry = Some(manifest_builder.create_string(&texture.entry));
-                let name = Some(manifest_builder.create_string(&artifact.name));
-                let identity = Some(manifest_builder.create_string(&artifact.identity));
-                let encoding = Some(manifest_builder.create_string(&artifact.encoding));
+            .map(|record| {
+                let name = Some(manifest_builder.create_string(&record.entry.name));
+                let desc = Some(schema::TextureDesc::create(
+                    &mut manifest_builder,
+                    &schema::TextureDescArgs {
+                        type_: schema::TextureType::Tex2d,
+                        format: schema::TextureFormat::BC7_UNORM,
+                        width: 1024,
+                        height: 1024,
+                        depth: 1,
+                        levels: 1,
+                        elements: 1,
+                    },
+                ));
+                let identity = record.output_identity.unwrap_or_default();
                 let data = if process_opt.embed {
-                    let data = fetch_from_cache(cache_path, &artifact.identity)
+                    let data = fetch_from_cache(cache_path, &identity)
                         .expect("failed to fetch from cache");
                     Some(manifest_builder.create_vector(&data))
                 } else {
                     None
                 };
-                schema::Artifact::create(
+                let identity = Some(manifest_builder.create_string(&identity));
+                schema::Texture::create(
                     &mut manifest_builder,
-                    &schema::ArtifactArgs {
+                    &schema::TextureArgs {
                         name,
                         identity,
-                        encoding,
-                        data,
+                        desc,
+                        data: None,
                     },
                 )
             })
@@ -372,7 +381,7 @@ fn process() -> Result<()> {
         let manifest_data = manifest_builder.finished_data();
         let manifest_file = File::create(output_path)?;
         let mut manifest_writer = BufWriter::new(manifest_file);
-        manifest_writer.write_all(&manifest_data)?;*/
+        manifest_writer.write_all(&manifest_data)?;
     }
 
     Ok(())
