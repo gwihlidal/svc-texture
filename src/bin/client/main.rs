@@ -24,13 +24,11 @@ use std::sync::{Arc, RwLock};
 use structopt::StructOpt;
 use svc_texture::client::transport;
 use svc_texture::error::Result;
+use svc_texture::process::schema;
 use svc_texture::process::*;
 use svc_texture::utilities::{
     compute_file_identity, compute_identity, /*self,*/ path_exists, read_file,
 };
-
-mod generated;
-//use crate::generated::service::texture::schema;
 
 const VERSION: Option<&'static str> = option_env!("CARGO_PKG_VERSION");
 

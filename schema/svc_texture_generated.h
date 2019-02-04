@@ -10,17 +10,566 @@ namespace service {
 namespace texture {
 namespace schema {
 
-struct Artifact;
+struct TextureData;
+
+struct TextureDesc;
 
 struct Texture;
 
 struct Manifest;
 
-struct Artifact FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+enum TextureType {
+  TextureType_Tex1dArray = 0,
+  TextureType_Tex2d = 1,
+  TextureType_Tex2dArray = 2,
+  TextureType_Tex3d = 3,
+  TextureType_Cube = 4,
+  TextureType_CubeArray = 5,
+  TextureType_MIN = TextureType_Tex1dArray,
+  TextureType_MAX = TextureType_CubeArray
+};
+
+inline const TextureType (&EnumValuesTextureType())[6] {
+  static const TextureType values[] = {
+    TextureType_Tex1dArray,
+    TextureType_Tex2d,
+    TextureType_Tex2dArray,
+    TextureType_Tex3d,
+    TextureType_Cube,
+    TextureType_CubeArray
+  };
+  return values;
+}
+
+inline const char * const *EnumNamesTextureType() {
+  static const char * const names[] = {
+    "Tex1dArray",
+    "Tex2d",
+    "Tex2dArray",
+    "Tex3d",
+    "Cube",
+    "CubeArray",
+    nullptr
+  };
+  return names;
+}
+
+inline const char *EnumNameTextureType(TextureType e) {
+  const size_t index = static_cast<int>(e);
+  return EnumNamesTextureType()[index];
+}
+
+enum TextureFormat {
+  TextureFormat_UNKNOWN = 0,
+  TextureFormat_R4G4_UNORM = 1,
+  TextureFormat_R4G4B4A4_UNORM = 2,
+  TextureFormat_R5G6B5_UNORM = 3,
+  TextureFormat_R5G5B5A1_UNORM = 4,
+  TextureFormat_R8_UNORM = 5,
+  TextureFormat_R8_SNORM = 6,
+  TextureFormat_R8_SRGB = 7,
+  TextureFormat_R8_UINT = 8,
+  TextureFormat_R8_SINT = 9,
+  TextureFormat_R8G8_UNORM = 10,
+  TextureFormat_R8G8_SNORM = 11,
+  TextureFormat_R8G8_SRGB = 12,
+  TextureFormat_R8G8_UINT = 13,
+  TextureFormat_R8G8_SINT = 14,
+  TextureFormat_R8G8B8_UNORM = 15,
+  TextureFormat_R8G8B8_SRGB = 16,
+  TextureFormat_R8G8B8A8_UNORM = 17,
+  TextureFormat_R8G8B8A8_SNORM = 18,
+  TextureFormat_R8G8B8A8_SRGB = 19,
+  TextureFormat_R8G8B8A8_UINT = 20,
+  TextureFormat_R8G8B8A8_SINT = 21,
+  TextureFormat_B8G8R8A8_UNORM = 22,
+  TextureFormat_B8G8R8A8_SRGB = 23,
+  TextureFormat_R11G11B10_FLOAT = 24,
+  TextureFormat_R10G10B10A2_UNORM = 25,
+  TextureFormat_R10G10B10A2_UINT = 26,
+  TextureFormat_R9G9B9E5_FLOAT = 27,
+  TextureFormat_R16_FLOAT = 28,
+  TextureFormat_R16_UNORM = 29,
+  TextureFormat_R16_SNORM = 30,
+  TextureFormat_R16_UINT = 31,
+  TextureFormat_R16_SINT = 32,
+  TextureFormat_R16G16_FLOAT = 33,
+  TextureFormat_R16G16_UNORM = 34,
+  TextureFormat_R16G16_SNORM = 35,
+  TextureFormat_R16G16_UINT = 36,
+  TextureFormat_R16G16_SINT = 37,
+  TextureFormat_R16G16B16A16_FLOAT = 38,
+  TextureFormat_R16G16B16A16_UNORM = 39,
+  TextureFormat_R16G16B16A16_SNORM = 40,
+  TextureFormat_R16G16B16A16_UINT = 41,
+  TextureFormat_R16G16B16A16_SINT = 42,
+  TextureFormat_R32_FLOAT = 43,
+  TextureFormat_R32_UINT = 44,
+  TextureFormat_R32_SINT = 45,
+  TextureFormat_R32G32_FLOAT = 46,
+  TextureFormat_R32G32_UINT = 47,
+  TextureFormat_R32G32_SINT = 48,
+  TextureFormat_R32G32B32_FLOAT = 49,
+  TextureFormat_R32G32B32_UINT = 50,
+  TextureFormat_R32G32B32_SINT = 51,
+  TextureFormat_R32G32B32A32_FLOAT = 52,
+  TextureFormat_R32G32B32A32_UINT = 53,
+  TextureFormat_R32G32B32A32_SINT = 54,
+  TextureFormat_BC1_UNORM = 55,
+  TextureFormat_BC1_SRGB = 56,
+  TextureFormat_BC1A_UNORM = 57,
+  TextureFormat_BC1A_SRGB = 58,
+  TextureFormat_BC2_UNORM = 59,
+  TextureFormat_BC2_SRGB = 60,
+  TextureFormat_BC3_UNORM = 61,
+  TextureFormat_BC3_SRGB = 62,
+  TextureFormat_BC4_UNORM = 63,
+  TextureFormat_BC4_SNORM = 64,
+  TextureFormat_BC5_UNORM = 65,
+  TextureFormat_BC5_SNORM = 66,
+  TextureFormat_BC6U_FLOAT = 67,
+  TextureFormat_BC6S_FLOAT = 68,
+  TextureFormat_BC7_UNORM = 69,
+  TextureFormat_BC7_SRGB = 70,
+  TextureFormat_ASTC_4x4_UNORM = 71,
+  TextureFormat_ASTC_4x4_SRGB = 72,
+  TextureFormat_ASTC_5x4_UNORM = 73,
+  TextureFormat_ASTC_5x4_SRGB = 74,
+  TextureFormat_ASTC_5x5_UNORM = 75,
+  TextureFormat_ASTC_5x5_SRGB = 76,
+  TextureFormat_ASTC_6x5_UNORM = 77,
+  TextureFormat_ASTC_6x5_SRGB = 78,
+  TextureFormat_ASTC_6x6_UNORM = 79,
+  TextureFormat_ASTC_6x6_SRGB = 80,
+  TextureFormat_ASTC_8x5_UNORM = 81,
+  TextureFormat_ASTC_8x5_SRGB = 82,
+  TextureFormat_ASTC_8x6_SRGB = 83,
+  TextureFormat_ASTC_8x6_UNORM = 84,
+  TextureFormat_ASTC_8x8_UNORM = 85,
+  TextureFormat_ASTC_8x8_SRGB = 86,
+  TextureFormat_ASTC_10x5_UNORM = 87,
+  TextureFormat_ASTC_10x5_SRGB = 88,
+  TextureFormat_ASTC_10x6_UNORM = 89,
+  TextureFormat_ASTC_10x6_SRGB = 90,
+  TextureFormat_ASTC_10x8_UNORM = 91,
+  TextureFormat_ASTC_10x8_SRGB = 92,
+  TextureFormat_ASTC_10x10_UNORM = 93,
+  TextureFormat_ASTC_10x10_SRGB = 94,
+  TextureFormat_ASTC_12x10_UNORM = 95,
+  TextureFormat_ASTC_12x10_SRGB = 96,
+  TextureFormat_ASTC_12x12_UNORM = 97,
+  TextureFormat_ASTC_12x12_SRGB = 98,
+  TextureFormat_D24_UNORM_S8_UINT = 99,
+  TextureFormat_D32_FLOAT_S8_UINT = 100,
+  TextureFormat_D16_UNORM = 101,
+  TextureFormat_D32_FLOAT = 102,
+  TextureFormat_MIN = TextureFormat_UNKNOWN,
+  TextureFormat_MAX = TextureFormat_D32_FLOAT
+};
+
+inline const TextureFormat (&EnumValuesTextureFormat())[103] {
+  static const TextureFormat values[] = {
+    TextureFormat_UNKNOWN,
+    TextureFormat_R4G4_UNORM,
+    TextureFormat_R4G4B4A4_UNORM,
+    TextureFormat_R5G6B5_UNORM,
+    TextureFormat_R5G5B5A1_UNORM,
+    TextureFormat_R8_UNORM,
+    TextureFormat_R8_SNORM,
+    TextureFormat_R8_SRGB,
+    TextureFormat_R8_UINT,
+    TextureFormat_R8_SINT,
+    TextureFormat_R8G8_UNORM,
+    TextureFormat_R8G8_SNORM,
+    TextureFormat_R8G8_SRGB,
+    TextureFormat_R8G8_UINT,
+    TextureFormat_R8G8_SINT,
+    TextureFormat_R8G8B8_UNORM,
+    TextureFormat_R8G8B8_SRGB,
+    TextureFormat_R8G8B8A8_UNORM,
+    TextureFormat_R8G8B8A8_SNORM,
+    TextureFormat_R8G8B8A8_SRGB,
+    TextureFormat_R8G8B8A8_UINT,
+    TextureFormat_R8G8B8A8_SINT,
+    TextureFormat_B8G8R8A8_UNORM,
+    TextureFormat_B8G8R8A8_SRGB,
+    TextureFormat_R11G11B10_FLOAT,
+    TextureFormat_R10G10B10A2_UNORM,
+    TextureFormat_R10G10B10A2_UINT,
+    TextureFormat_R9G9B9E5_FLOAT,
+    TextureFormat_R16_FLOAT,
+    TextureFormat_R16_UNORM,
+    TextureFormat_R16_SNORM,
+    TextureFormat_R16_UINT,
+    TextureFormat_R16_SINT,
+    TextureFormat_R16G16_FLOAT,
+    TextureFormat_R16G16_UNORM,
+    TextureFormat_R16G16_SNORM,
+    TextureFormat_R16G16_UINT,
+    TextureFormat_R16G16_SINT,
+    TextureFormat_R16G16B16A16_FLOAT,
+    TextureFormat_R16G16B16A16_UNORM,
+    TextureFormat_R16G16B16A16_SNORM,
+    TextureFormat_R16G16B16A16_UINT,
+    TextureFormat_R16G16B16A16_SINT,
+    TextureFormat_R32_FLOAT,
+    TextureFormat_R32_UINT,
+    TextureFormat_R32_SINT,
+    TextureFormat_R32G32_FLOAT,
+    TextureFormat_R32G32_UINT,
+    TextureFormat_R32G32_SINT,
+    TextureFormat_R32G32B32_FLOAT,
+    TextureFormat_R32G32B32_UINT,
+    TextureFormat_R32G32B32_SINT,
+    TextureFormat_R32G32B32A32_FLOAT,
+    TextureFormat_R32G32B32A32_UINT,
+    TextureFormat_R32G32B32A32_SINT,
+    TextureFormat_BC1_UNORM,
+    TextureFormat_BC1_SRGB,
+    TextureFormat_BC1A_UNORM,
+    TextureFormat_BC1A_SRGB,
+    TextureFormat_BC2_UNORM,
+    TextureFormat_BC2_SRGB,
+    TextureFormat_BC3_UNORM,
+    TextureFormat_BC3_SRGB,
+    TextureFormat_BC4_UNORM,
+    TextureFormat_BC4_SNORM,
+    TextureFormat_BC5_UNORM,
+    TextureFormat_BC5_SNORM,
+    TextureFormat_BC6U_FLOAT,
+    TextureFormat_BC6S_FLOAT,
+    TextureFormat_BC7_UNORM,
+    TextureFormat_BC7_SRGB,
+    TextureFormat_ASTC_4x4_UNORM,
+    TextureFormat_ASTC_4x4_SRGB,
+    TextureFormat_ASTC_5x4_UNORM,
+    TextureFormat_ASTC_5x4_SRGB,
+    TextureFormat_ASTC_5x5_UNORM,
+    TextureFormat_ASTC_5x5_SRGB,
+    TextureFormat_ASTC_6x5_UNORM,
+    TextureFormat_ASTC_6x5_SRGB,
+    TextureFormat_ASTC_6x6_UNORM,
+    TextureFormat_ASTC_6x6_SRGB,
+    TextureFormat_ASTC_8x5_UNORM,
+    TextureFormat_ASTC_8x5_SRGB,
+    TextureFormat_ASTC_8x6_SRGB,
+    TextureFormat_ASTC_8x6_UNORM,
+    TextureFormat_ASTC_8x8_UNORM,
+    TextureFormat_ASTC_8x8_SRGB,
+    TextureFormat_ASTC_10x5_UNORM,
+    TextureFormat_ASTC_10x5_SRGB,
+    TextureFormat_ASTC_10x6_UNORM,
+    TextureFormat_ASTC_10x6_SRGB,
+    TextureFormat_ASTC_10x8_UNORM,
+    TextureFormat_ASTC_10x8_SRGB,
+    TextureFormat_ASTC_10x10_UNORM,
+    TextureFormat_ASTC_10x10_SRGB,
+    TextureFormat_ASTC_12x10_UNORM,
+    TextureFormat_ASTC_12x10_SRGB,
+    TextureFormat_ASTC_12x12_UNORM,
+    TextureFormat_ASTC_12x12_SRGB,
+    TextureFormat_D24_UNORM_S8_UINT,
+    TextureFormat_D32_FLOAT_S8_UINT,
+    TextureFormat_D16_UNORM,
+    TextureFormat_D32_FLOAT
+  };
+  return values;
+}
+
+inline const char * const *EnumNamesTextureFormat() {
+  static const char * const names[] = {
+    "UNKNOWN",
+    "R4G4_UNORM",
+    "R4G4B4A4_UNORM",
+    "R5G6B5_UNORM",
+    "R5G5B5A1_UNORM",
+    "R8_UNORM",
+    "R8_SNORM",
+    "R8_SRGB",
+    "R8_UINT",
+    "R8_SINT",
+    "R8G8_UNORM",
+    "R8G8_SNORM",
+    "R8G8_SRGB",
+    "R8G8_UINT",
+    "R8G8_SINT",
+    "R8G8B8_UNORM",
+    "R8G8B8_SRGB",
+    "R8G8B8A8_UNORM",
+    "R8G8B8A8_SNORM",
+    "R8G8B8A8_SRGB",
+    "R8G8B8A8_UINT",
+    "R8G8B8A8_SINT",
+    "B8G8R8A8_UNORM",
+    "B8G8R8A8_SRGB",
+    "R11G11B10_FLOAT",
+    "R10G10B10A2_UNORM",
+    "R10G10B10A2_UINT",
+    "R9G9B9E5_FLOAT",
+    "R16_FLOAT",
+    "R16_UNORM",
+    "R16_SNORM",
+    "R16_UINT",
+    "R16_SINT",
+    "R16G16_FLOAT",
+    "R16G16_UNORM",
+    "R16G16_SNORM",
+    "R16G16_UINT",
+    "R16G16_SINT",
+    "R16G16B16A16_FLOAT",
+    "R16G16B16A16_UNORM",
+    "R16G16B16A16_SNORM",
+    "R16G16B16A16_UINT",
+    "R16G16B16A16_SINT",
+    "R32_FLOAT",
+    "R32_UINT",
+    "R32_SINT",
+    "R32G32_FLOAT",
+    "R32G32_UINT",
+    "R32G32_SINT",
+    "R32G32B32_FLOAT",
+    "R32G32B32_UINT",
+    "R32G32B32_SINT",
+    "R32G32B32A32_FLOAT",
+    "R32G32B32A32_UINT",
+    "R32G32B32A32_SINT",
+    "BC1_UNORM",
+    "BC1_SRGB",
+    "BC1A_UNORM",
+    "BC1A_SRGB",
+    "BC2_UNORM",
+    "BC2_SRGB",
+    "BC3_UNORM",
+    "BC3_SRGB",
+    "BC4_UNORM",
+    "BC4_SNORM",
+    "BC5_UNORM",
+    "BC5_SNORM",
+    "BC6U_FLOAT",
+    "BC6S_FLOAT",
+    "BC7_UNORM",
+    "BC7_SRGB",
+    "ASTC_4x4_UNORM",
+    "ASTC_4x4_SRGB",
+    "ASTC_5x4_UNORM",
+    "ASTC_5x4_SRGB",
+    "ASTC_5x5_UNORM",
+    "ASTC_5x5_SRGB",
+    "ASTC_6x5_UNORM",
+    "ASTC_6x5_SRGB",
+    "ASTC_6x6_UNORM",
+    "ASTC_6x6_SRGB",
+    "ASTC_8x5_UNORM",
+    "ASTC_8x5_SRGB",
+    "ASTC_8x6_SRGB",
+    "ASTC_8x6_UNORM",
+    "ASTC_8x8_UNORM",
+    "ASTC_8x8_SRGB",
+    "ASTC_10x5_UNORM",
+    "ASTC_10x5_SRGB",
+    "ASTC_10x6_UNORM",
+    "ASTC_10x6_SRGB",
+    "ASTC_10x8_UNORM",
+    "ASTC_10x8_SRGB",
+    "ASTC_10x10_UNORM",
+    "ASTC_10x10_SRGB",
+    "ASTC_12x10_UNORM",
+    "ASTC_12x10_SRGB",
+    "ASTC_12x12_UNORM",
+    "ASTC_12x12_SRGB",
+    "D24_UNORM_S8_UINT",
+    "D32_FLOAT_S8_UINT",
+    "D16_UNORM",
+    "D32_FLOAT",
+    nullptr
+  };
+  return names;
+}
+
+inline const char *EnumNameTextureFormat(TextureFormat e) {
+  const size_t index = static_cast<int>(e);
+  return EnumNamesTextureFormat()[index];
+}
+
+struct TextureData FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  enum {
+    VT_ROW_PITCH = 4,
+    VT_SLICE_PITCH = 6,
+    VT_DATA = 8
+  };
+  uint32_t row_pitch() const {
+    return GetField<uint32_t>(VT_ROW_PITCH, 0);
+  }
+  uint32_t slice_pitch() const {
+    return GetField<uint32_t>(VT_SLICE_PITCH, 0);
+  }
+  const flatbuffers::Vector<uint8_t> *data() const {
+    return GetPointer<const flatbuffers::Vector<uint8_t> *>(VT_DATA);
+  }
+  bool Verify(flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyField<uint32_t>(verifier, VT_ROW_PITCH) &&
+           VerifyField<uint32_t>(verifier, VT_SLICE_PITCH) &&
+           VerifyOffset(verifier, VT_DATA) &&
+           verifier.VerifyVector(data()) &&
+           verifier.EndTable();
+  }
+};
+
+struct TextureDataBuilder {
+  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::uoffset_t start_;
+  void add_row_pitch(uint32_t row_pitch) {
+    fbb_.AddElement<uint32_t>(TextureData::VT_ROW_PITCH, row_pitch, 0);
+  }
+  void add_slice_pitch(uint32_t slice_pitch) {
+    fbb_.AddElement<uint32_t>(TextureData::VT_SLICE_PITCH, slice_pitch, 0);
+  }
+  void add_data(flatbuffers::Offset<flatbuffers::Vector<uint8_t>> data) {
+    fbb_.AddOffset(TextureData::VT_DATA, data);
+  }
+  explicit TextureDataBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  TextureDataBuilder &operator=(const TextureDataBuilder &);
+  flatbuffers::Offset<TextureData> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = flatbuffers::Offset<TextureData>(end);
+    return o;
+  }
+};
+
+inline flatbuffers::Offset<TextureData> CreateTextureData(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    uint32_t row_pitch = 0,
+    uint32_t slice_pitch = 0,
+    flatbuffers::Offset<flatbuffers::Vector<uint8_t>> data = 0) {
+  TextureDataBuilder builder_(_fbb);
+  builder_.add_data(data);
+  builder_.add_slice_pitch(slice_pitch);
+  builder_.add_row_pitch(row_pitch);
+  return builder_.Finish();
+}
+
+inline flatbuffers::Offset<TextureData> CreateTextureDataDirect(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    uint32_t row_pitch = 0,
+    uint32_t slice_pitch = 0,
+    const std::vector<uint8_t> *data = nullptr) {
+  return service::texture::schema::CreateTextureData(
+      _fbb,
+      row_pitch,
+      slice_pitch,
+      data ? _fbb.CreateVector<uint8_t>(*data) : 0);
+}
+
+struct TextureDesc FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  enum {
+    VT_TYPE = 4,
+    VT_FORMAT = 6,
+    VT_WIDTH = 8,
+    VT_HEIGHT = 10,
+    VT_DEPTH = 12,
+    VT_LEVELS = 14,
+    VT_ELEMENTS = 16
+  };
+  TextureType type() const {
+    return static_cast<TextureType>(GetField<int8_t>(VT_TYPE, 0));
+  }
+  TextureFormat format() const {
+    return static_cast<TextureFormat>(GetField<int8_t>(VT_FORMAT, 0));
+  }
+  uint32_t width() const {
+    return GetField<uint32_t>(VT_WIDTH, 0);
+  }
+  uint32_t height() const {
+    return GetField<uint32_t>(VT_HEIGHT, 0);
+  }
+  uint32_t depth() const {
+    return GetField<uint32_t>(VT_DEPTH, 0);
+  }
+  uint32_t levels() const {
+    return GetField<uint32_t>(VT_LEVELS, 0);
+  }
+  uint32_t elements() const {
+    return GetField<uint32_t>(VT_ELEMENTS, 0);
+  }
+  bool Verify(flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyField<int8_t>(verifier, VT_TYPE) &&
+           VerifyField<int8_t>(verifier, VT_FORMAT) &&
+           VerifyField<uint32_t>(verifier, VT_WIDTH) &&
+           VerifyField<uint32_t>(verifier, VT_HEIGHT) &&
+           VerifyField<uint32_t>(verifier, VT_DEPTH) &&
+           VerifyField<uint32_t>(verifier, VT_LEVELS) &&
+           VerifyField<uint32_t>(verifier, VT_ELEMENTS) &&
+           verifier.EndTable();
+  }
+};
+
+struct TextureDescBuilder {
+  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::uoffset_t start_;
+  void add_type(TextureType type) {
+    fbb_.AddElement<int8_t>(TextureDesc::VT_TYPE, static_cast<int8_t>(type), 0);
+  }
+  void add_format(TextureFormat format) {
+    fbb_.AddElement<int8_t>(TextureDesc::VT_FORMAT, static_cast<int8_t>(format), 0);
+  }
+  void add_width(uint32_t width) {
+    fbb_.AddElement<uint32_t>(TextureDesc::VT_WIDTH, width, 0);
+  }
+  void add_height(uint32_t height) {
+    fbb_.AddElement<uint32_t>(TextureDesc::VT_HEIGHT, height, 0);
+  }
+  void add_depth(uint32_t depth) {
+    fbb_.AddElement<uint32_t>(TextureDesc::VT_DEPTH, depth, 0);
+  }
+  void add_levels(uint32_t levels) {
+    fbb_.AddElement<uint32_t>(TextureDesc::VT_LEVELS, levels, 0);
+  }
+  void add_elements(uint32_t elements) {
+    fbb_.AddElement<uint32_t>(TextureDesc::VT_ELEMENTS, elements, 0);
+  }
+  explicit TextureDescBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  TextureDescBuilder &operator=(const TextureDescBuilder &);
+  flatbuffers::Offset<TextureDesc> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = flatbuffers::Offset<TextureDesc>(end);
+    return o;
+  }
+};
+
+inline flatbuffers::Offset<TextureDesc> CreateTextureDesc(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    TextureType type = TextureType_Tex1dArray,
+    TextureFormat format = TextureFormat_UNKNOWN,
+    uint32_t width = 0,
+    uint32_t height = 0,
+    uint32_t depth = 0,
+    uint32_t levels = 0,
+    uint32_t elements = 0) {
+  TextureDescBuilder builder_(_fbb);
+  builder_.add_elements(elements);
+  builder_.add_levels(levels);
+  builder_.add_depth(depth);
+  builder_.add_height(height);
+  builder_.add_width(width);
+  builder_.add_format(format);
+  builder_.add_type(type);
+  return builder_.Finish();
+}
+
+struct Texture FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   enum {
     VT_NAME = 4,
     VT_IDENTITY = 6,
-    VT_DATA = 8
+    VT_DESC = 8,
+    VT_DATA = 10
   };
   const flatbuffers::String *name() const {
     return GetPointer<const flatbuffers::String *>(VT_NAME);
@@ -28,8 +577,11 @@ struct Artifact FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   const flatbuffers::String *identity() const {
     return GetPointer<const flatbuffers::String *>(VT_IDENTITY);
   }
-  const flatbuffers::Vector<uint8_t> *data() const {
-    return GetPointer<const flatbuffers::Vector<uint8_t> *>(VT_DATA);
+  const TextureDesc *desc() const {
+    return GetPointer<const TextureDesc *>(VT_DESC);
+  }
+  const flatbuffers::Vector<flatbuffers::Offset<TextureData>> *data() const {
+    return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<TextureData>> *>(VT_DATA);
   }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
@@ -37,83 +589,11 @@ struct Artifact FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
            verifier.VerifyString(name()) &&
            VerifyOffset(verifier, VT_IDENTITY) &&
            verifier.VerifyString(identity()) &&
+           VerifyOffset(verifier, VT_DESC) &&
+           verifier.VerifyTable(desc()) &&
            VerifyOffset(verifier, VT_DATA) &&
            verifier.VerifyVector(data()) &&
-           verifier.EndTable();
-  }
-};
-
-struct ArtifactBuilder {
-  flatbuffers::FlatBufferBuilder &fbb_;
-  flatbuffers::uoffset_t start_;
-  void add_name(flatbuffers::Offset<flatbuffers::String> name) {
-    fbb_.AddOffset(Artifact::VT_NAME, name);
-  }
-  void add_identity(flatbuffers::Offset<flatbuffers::String> identity) {
-    fbb_.AddOffset(Artifact::VT_IDENTITY, identity);
-  }
-  void add_data(flatbuffers::Offset<flatbuffers::Vector<uint8_t>> data) {
-    fbb_.AddOffset(Artifact::VT_DATA, data);
-  }
-  explicit ArtifactBuilder(flatbuffers::FlatBufferBuilder &_fbb)
-        : fbb_(_fbb) {
-    start_ = fbb_.StartTable();
-  }
-  ArtifactBuilder &operator=(const ArtifactBuilder &);
-  flatbuffers::Offset<Artifact> Finish() {
-    const auto end = fbb_.EndTable(start_);
-    auto o = flatbuffers::Offset<Artifact>(end);
-    return o;
-  }
-};
-
-inline flatbuffers::Offset<Artifact> CreateArtifact(
-    flatbuffers::FlatBufferBuilder &_fbb,
-    flatbuffers::Offset<flatbuffers::String> name = 0,
-    flatbuffers::Offset<flatbuffers::String> identity = 0,
-    flatbuffers::Offset<flatbuffers::Vector<uint8_t>> data = 0) {
-  ArtifactBuilder builder_(_fbb);
-  builder_.add_data(data);
-  builder_.add_identity(identity);
-  builder_.add_name(name);
-  return builder_.Finish();
-}
-
-inline flatbuffers::Offset<Artifact> CreateArtifactDirect(
-    flatbuffers::FlatBufferBuilder &_fbb,
-    const char *name = nullptr,
-    const char *identity = nullptr,
-    const std::vector<uint8_t> *data = nullptr) {
-  return service::texture::schema::CreateArtifact(
-      _fbb,
-      name ? _fbb.CreateString(name) : 0,
-      identity ? _fbb.CreateString(identity) : 0,
-      data ? _fbb.CreateVector<uint8_t>(*data) : 0);
-}
-
-struct Texture FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
-  enum {
-    VT_NAME = 4,
-    VT_ENTRY = 6,
-    VT_ARTIFACT = 8
-  };
-  const flatbuffers::String *name() const {
-    return GetPointer<const flatbuffers::String *>(VT_NAME);
-  }
-  const flatbuffers::String *entry() const {
-    return GetPointer<const flatbuffers::String *>(VT_ENTRY);
-  }
-  const Artifact *artifact() const {
-    return GetPointer<const Artifact *>(VT_ARTIFACT);
-  }
-  bool Verify(flatbuffers::Verifier &verifier) const {
-    return VerifyTableStart(verifier) &&
-           VerifyOffset(verifier, VT_NAME) &&
-           verifier.VerifyString(name()) &&
-           VerifyOffset(verifier, VT_ENTRY) &&
-           verifier.VerifyString(entry()) &&
-           VerifyOffset(verifier, VT_ARTIFACT) &&
-           verifier.VerifyTable(artifact()) &&
+           verifier.VerifyVectorOfTables(data()) &&
            verifier.EndTable();
   }
 };
@@ -124,11 +604,14 @@ struct TextureBuilder {
   void add_name(flatbuffers::Offset<flatbuffers::String> name) {
     fbb_.AddOffset(Texture::VT_NAME, name);
   }
-  void add_entry(flatbuffers::Offset<flatbuffers::String> entry) {
-    fbb_.AddOffset(Texture::VT_ENTRY, entry);
+  void add_identity(flatbuffers::Offset<flatbuffers::String> identity) {
+    fbb_.AddOffset(Texture::VT_IDENTITY, identity);
   }
-  void add_artifact(flatbuffers::Offset<Artifact> artifact) {
-    fbb_.AddOffset(Texture::VT_ARTIFACT, artifact);
+  void add_desc(flatbuffers::Offset<TextureDesc> desc) {
+    fbb_.AddOffset(Texture::VT_DESC, desc);
+  }
+  void add_data(flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<TextureData>>> data) {
+    fbb_.AddOffset(Texture::VT_DATA, data);
   }
   explicit TextureBuilder(flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
@@ -145,11 +628,13 @@ struct TextureBuilder {
 inline flatbuffers::Offset<Texture> CreateTexture(
     flatbuffers::FlatBufferBuilder &_fbb,
     flatbuffers::Offset<flatbuffers::String> name = 0,
-    flatbuffers::Offset<flatbuffers::String> entry = 0,
-    flatbuffers::Offset<Artifact> artifact = 0) {
+    flatbuffers::Offset<flatbuffers::String> identity = 0,
+    flatbuffers::Offset<TextureDesc> desc = 0,
+    flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<TextureData>>> data = 0) {
   TextureBuilder builder_(_fbb);
-  builder_.add_artifact(artifact);
-  builder_.add_entry(entry);
+  builder_.add_data(data);
+  builder_.add_desc(desc);
+  builder_.add_identity(identity);
   builder_.add_name(name);
   return builder_.Finish();
 }
@@ -157,13 +642,15 @@ inline flatbuffers::Offset<Texture> CreateTexture(
 inline flatbuffers::Offset<Texture> CreateTextureDirect(
     flatbuffers::FlatBufferBuilder &_fbb,
     const char *name = nullptr,
-    const char *entry = nullptr,
-    flatbuffers::Offset<Artifact> artifact = 0) {
+    const char *identity = nullptr,
+    flatbuffers::Offset<TextureDesc> desc = 0,
+    const std::vector<flatbuffers::Offset<TextureData>> *data = nullptr) {
   return service::texture::schema::CreateTexture(
       _fbb,
       name ? _fbb.CreateString(name) : 0,
-      entry ? _fbb.CreateString(entry) : 0,
-      artifact);
+      identity ? _fbb.CreateString(identity) : 0,
+      desc,
+      data ? _fbb.CreateVector<flatbuffers::Offset<TextureData>>(*data) : 0);
 }
 
 struct Manifest FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {

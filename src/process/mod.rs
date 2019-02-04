@@ -2,6 +2,10 @@ pub mod bcn;
 pub mod manifest;
 pub mod mips;
 
+pub mod generated;
+pub use generated::service::texture::schema;
+pub use schema::{Texture, TextureData, TextureDesc};
+
 pub use self::bcn::*;
 pub use self::manifest::*;
 pub use self::mips::*;

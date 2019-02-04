@@ -1,15 +1,159 @@
 namespace service.texture.schema;
 
-table Artifact {
-    name:string;
-    identity:string;
-    data:[ubyte];    
+enum TextureType:byte {
+    Tex1dArray,
+    Tex2d,
+	Tex2dArray,
+	Tex3d,
+	Cube,
+	CubeArray,
+}
+
+enum TextureFormat:byte
+{
+	UNKNOWN = 0,
+
+	R4G4_UNORM,
+	R4G4B4A4_UNORM,
+	R5G6B5_UNORM,
+	R5G5B5A1_UNORM,
+
+	R8_UNORM,
+	R8_SNORM,
+	R8_SRGB,
+	R8_UINT,
+	R8_SINT,
+
+	R8G8_UNORM,
+	R8G8_SNORM,
+	R8G8_SRGB,
+	R8G8_UINT,
+	R8G8_SINT,
+
+	R8G8B8_UNORM,
+	R8G8B8_SRGB,
+
+	R8G8B8A8_UNORM,
+	R8G8B8A8_SNORM,
+	R8G8B8A8_SRGB,
+	R8G8B8A8_UINT,
+	R8G8B8A8_SINT,
+
+	B8G8R8A8_UNORM,
+	B8G8R8A8_SRGB,
+
+	R11G11B10_FLOAT,
+	R10G10B10A2_UNORM,
+	R10G10B10A2_UINT,
+	R9G9B9E5_FLOAT,
+
+	R16_FLOAT,
+	R16_UNORM,
+	R16_SNORM,
+	R16_UINT,
+	R16_SINT,
+
+	R16G16_FLOAT,
+	R16G16_UNORM,
+	R16G16_SNORM,
+	R16G16_UINT,
+	R16G16_SINT,
+
+	R16G16B16A16_FLOAT,
+	R16G16B16A16_UNORM,
+	R16G16B16A16_SNORM,
+	R16G16B16A16_UINT,
+	R16G16B16A16_SINT,
+
+	R32_FLOAT,
+	R32_UINT,
+	R32_SINT,
+
+	R32G32_FLOAT,
+	R32G32_UINT,
+	R32G32_SINT,
+
+	R32G32B32_FLOAT,
+	R32G32B32_UINT,
+	R32G32B32_SINT,
+
+	R32G32B32A32_FLOAT,
+	R32G32B32A32_UINT,
+	R32G32B32A32_SINT,
+
+	BC1_UNORM,
+	BC1_SRGB,
+	BC1A_UNORM,
+	BC1A_SRGB,
+	BC2_UNORM,
+	BC2_SRGB,
+	BC3_UNORM,
+	BC3_SRGB,
+	BC4_UNORM,
+	BC4_SNORM,
+	BC5_UNORM,
+	BC5_SNORM,
+	BC6U_FLOAT,
+	BC6S_FLOAT,
+	BC7_UNORM,
+	BC7_SRGB,
+
+	ASTC_4x4_UNORM,
+	ASTC_4x4_SRGB,
+	ASTC_5x4_UNORM,
+	ASTC_5x4_SRGB,
+	ASTC_5x5_UNORM,
+	ASTC_5x5_SRGB,
+	ASTC_6x5_UNORM,
+	ASTC_6x5_SRGB,
+	ASTC_6x6_UNORM,
+	ASTC_6x6_SRGB,
+	ASTC_8x5_UNORM,
+	ASTC_8x5_SRGB,
+	ASTC_8x6_SRGB,
+	ASTC_8x6_UNORM,
+	ASTC_8x8_UNORM,
+	ASTC_8x8_SRGB,
+	ASTC_10x5_UNORM,
+	ASTC_10x5_SRGB,
+	ASTC_10x6_UNORM,
+	ASTC_10x6_SRGB,
+	ASTC_10x8_UNORM,
+	ASTC_10x8_SRGB,
+	ASTC_10x10_UNORM,
+	ASTC_10x10_SRGB,
+	ASTC_12x10_UNORM,
+	ASTC_12x10_SRGB,
+	ASTC_12x12_UNORM,
+	ASTC_12x12_SRGB,
+
+	D24_UNORM_S8_UINT,
+	D32_FLOAT_S8_UINT,
+	D16_UNORM,
+	D32_FLOAT,
+}
+
+table TextureData {
+    row_pitch:uint32;
+    slice_pitch:uint32;
+    data:[ubyte];
+}
+
+table TextureDesc {
+    type:TextureType;
+    format:TextureFormat;
+    width:uint32;
+    height:uint32;
+    depth:uint32;
+    levels:uint32;
+    elements:uint32;
 }
 
 table Texture {
     name:string;
-    entry:string;
-    artifact:Artifact;
+    identity:string;
+    desc:TextureDesc;
+    data:[TextureData];
 }
 
 table Manifest {

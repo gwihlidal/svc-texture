@@ -1,4 +1,5 @@
 use crate::error::{Error, ErrorKind, Result};
+use crate::process::generated::service::texture::schema;
 use crate::utilities::{path_exists, read_file_string};
 use failure::ResultExt;
 use std::path::Path;
