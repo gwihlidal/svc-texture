@@ -258,26 +258,43 @@ fn process() -> Result<()> {
     {
         let mut records = records.write().unwrap();
         for record in &mut *records {
-            let input_image = image::open(&Path::new(&record.entry.file)).unwrap();
+            if record.entry.format == "dds" {
+                // Straight pass-through of dds blocks (with extracted header meta data)
+                let dds_data = fetch_from_cache(cache_path, &record.input_identity)
+                    .expect("failed to fetch from cache");
 
-            let images = if record.entry.mips {
-                generate_mips(input_image, image::FilterType::Lanczos3, Some((4, 4)))
+                let output_identity = record.input_identity.to_owned();
+                assert!(cache_hit(cache_path, &output_identity));
+                record.output_identity = Some(output_identity);
             } else {
-                vec![input_image]
-            };
+                let input_path = base_path.join(&record.entry.file);
+                let input_image = image::open(&input_path).unwrap();
 
-            let output_format = parse_output_format(&record.entry.format);
-            let output_data = match output_format {
-                OutputFormat::Bc1 => bcn::compress_bc1_2d(&images),
-                OutputFormat::Bc3 => bcn::compress_bc3_2d(&images),
-                OutputFormat::Bc6h => bcn::compress_bc6h_2d(&images, Bc6hQuality::Basic),
-                OutputFormat::Bc7 => bcn::compress_bc7_2d(&images, Bc7Quality::Basic),
-                _ => unimplemented!(),
-            };
+                let images = if record.entry.mips.unwrap_or_else(|| true) {
+                    let min_width = 4; // Minimum block height for DXT
+                    let min_height = 4; // Minimum block height for DXT
+                    generate_mips(
+                        input_image,
+                        image::FilterType::Lanczos3,
+                        Some((min_width, min_height)),
+                    )
+                } else {
+                    vec![input_image]
+                };
 
-            let output_identity = compute_identity(&output_data);
-            cache_if_missing(cache_path, &output_identity, &output_data)?;
-            record.output_identity = Some(output_identity);
+                let output_format = parse_output_format(&record.entry.format);
+                let output_data = match output_format {
+                    OutputFormat::Bc1 => bcn::compress_bc1_2d(&images),
+                    OutputFormat::Bc3 => bcn::compress_bc3_2d(&images),
+                    OutputFormat::Bc6h => bcn::compress_bc6h_2d(&images, Bc6hQuality::Basic),
+                    OutputFormat::Bc7 => bcn::compress_bc7_2d(&images, Bc7Quality::Basic),
+                    _ => unimplemented!(),
+                };
+
+                let output_identity = compute_identity(&output_data);
+                cache_if_missing(cache_path, &output_identity, &output_data)?;
+                record.output_identity = Some(output_identity);
+            }
         }
     }
 

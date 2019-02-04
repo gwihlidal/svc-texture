@@ -9,7 +9,7 @@ pub struct TextureEntry {
     pub name: String,
     pub file: String,
     pub format: String,
-    pub mips: bool,
+    pub mips: Option<bool>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
