@@ -55,6 +55,10 @@ struct Options {
     #[structopt(short = "c", long = "cache", parse(from_os_str))]
     cache: Option<PathBuf>,
 
+    /// Base directory
+    #[structopt(short = "b", long = "base", parse(from_os_str))]
+    base: Option<PathBuf>,
+
     /// Embed data in output manifest
     #[structopt(short = "e", long = "embed")]
     embed: bool,
@@ -170,6 +174,11 @@ fn process() -> Result<()> {
     );
     debug!("{:?}", process_opt);
 
+    let base_path = match process_opt.base {
+        Some(ref base_path) => base_path,
+        None => Path::new("./"),
+    };
+
     let cache_path = match process_opt.cache {
         Some(ref cache_path) => cache_path,
         None => Path::new("./.cache"),
@@ -190,7 +199,7 @@ fn process() -> Result<()> {
     let mut thread_pool = Pool::new(8);
 
     // Load texture manifest from toml path
-    let manifest = load_manifest(&process_opt.input.as_path())?;
+    let manifest = load_manifest(&base_path, &process_opt.input.as_path())?;
 
     let mut active_identities: Vec<String> = Vec::with_capacity(manifest.entries.len());
 
@@ -200,7 +209,7 @@ fn process() -> Result<()> {
     if manifest.entries.len() > 0 {
         let mut records = records.write().unwrap();
         for entry in &manifest.entries {
-            let input_path = Path::new(&entry.file);
+            let input_path = base_path.join(&entry.file);
             let input_identity = compute_file_identity(&input_path).unwrap();
             active_identities.push(input_identity.clone());
             println!("name: {}, identity: {}", entry.name, input_identity);
