@@ -19,16 +19,6 @@ extern crate svc_texture;
 #[macro_use]
 extern crate serde_derive;
 
-use svc_texture::encoding::{encode_data, Encoding};
-use svc_texture::error::{Error, ErrorKind, Result};
-use svc_texture::proto;
-use svc_texture::utilities::{
-    any_as_u8_slice, compute_file_identity, compute_identity, path_exists, read_file, TempDir,
-    TempFile, BUILD_ID,
-};
-
-use base58::ToBase58;
-use bincode::{deserialize, serialize};
 use futures::sync::mpsc;
 use futures::{future, Future, Sink, Stream};
 use h2::server::Builder;
@@ -41,7 +31,13 @@ use std::io::BufWriter;
 use std::io::{Cursor, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use svc_texture::error::{Error, ErrorKind, Result};
 use svc_texture::identity::compute_data_identity;
+use svc_texture::proto;
+use svc_texture::utilities::{
+    any_as_u8_slice, compute_file_identity, compute_identity, path_exists, read_file, TempDir,
+    TempFile, BUILD_ID,
+};
 use tokio::executor::DefaultExecutor;
 use tokio::net::TcpListener;
 use tower_grpc::Error as GrpcError;
@@ -189,6 +185,7 @@ impl proto::service::server::Texture for ServiceBackend {
         &mut self,
         request: GrpcRequest<proto::service::DownloadRequest>,
     ) -> Self::DownloadFuture {
+        use smush::Encoding;
         use std::str::FromStr;
 
         let context = self.context.clone();

@@ -1,6 +1,5 @@
 #![allow(dead_code)]
 
-extern crate base58;
 extern crate chashmap;
 extern crate scoped_threadpool;
 extern crate serde;
@@ -21,12 +20,11 @@ use std::fs::File;
 use std::io::{BufWriter, Write};
 use std::path::Path;
 use std::path::PathBuf;
+use std::sync::{Arc, RwLock};
 use structopt::StructOpt;
 use svc_texture::client::transport;
-use svc_texture::process::*;
-//use svc_texture::encoding::{decode_data, encode_data, Encoding};
-use std::sync::{Arc, RwLock};
 use svc_texture::error::Result;
+use svc_texture::process::*;
 use svc_texture::utilities::{
     compute_file_identity, compute_identity, /*self,*/ path_exists, read_file,
 };

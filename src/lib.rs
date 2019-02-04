@@ -3,7 +3,6 @@
 extern crate regex;
 #[macro_use]
 extern crate lazy_static;
-extern crate base58;
 extern crate filebuffer;
 extern crate futures;
 extern crate futures_cpupool;
@@ -12,12 +11,8 @@ extern crate prost;
 extern crate sha2;
 #[macro_use]
 extern crate prost_derive;
-extern crate bincode;
-extern crate brotli;
 extern crate dotenv;
 extern crate failure;
-extern crate flate2;
-extern crate lzma_rs;
 extern crate prost_types;
 extern crate tower_grpc;
 extern crate uuid;
@@ -35,10 +30,12 @@ extern crate twox_hash;
 extern crate log;
 extern crate fern;
 //#[macro_use]
+extern crate bincode;
 extern crate ddsfile;
 extern crate flatbuffers;
 extern crate image;
 extern crate intel_tex;
+extern crate smush;
 extern crate structopt;
 
 pub use self::gen::*;
@@ -57,7 +54,6 @@ pub mod gen {
 }
 
 pub mod client;
-pub mod encoding;
 pub mod error;
 pub mod identity;
 pub mod process;
