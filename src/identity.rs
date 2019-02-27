@@ -7,7 +7,7 @@ pub struct Identity {
 }
 
 pub fn compute_data_identity(data: &[u8]) -> Identity {
-    use smush::{encode_data, Encoding};
+    use smush::{encode, Encoding, Quality};
 
     // create a Sha256 object
     let mut hasher = Sha256::default();
@@ -17,7 +17,7 @@ pub fn compute_data_identity(data: &[u8]) -> Identity {
 
     // read hash digest and consume hasher
     let output_raw = hasher.result().to_vec();
-    let output_b58 = encode_data(&output_raw, Encoding::Base58).unwrap();
+    let output_b58 = encode(&output_raw, Encoding::Base58, Quality::Default).unwrap();
     let output_txt = String::from_utf8(output_b58).unwrap();
 
     Identity {

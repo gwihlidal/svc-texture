@@ -16,7 +16,7 @@ pub unsafe fn any_as_u8_slice<T: Sized>(p: &T) -> &[u8] {
 
 pub fn compute_identity(data: &[u8]) -> String {
     use sha2::{Digest, Sha256};
-    use smush::{encode_data, Encoding};
+    use smush::{encode, Encoding, Quality};
 
     // create a Sha256 object
     let mut hasher = Sha256::default();
@@ -26,7 +26,7 @@ pub fn compute_identity(data: &[u8]) -> String {
 
     // read hash digest and consume hasher
     let data = hasher.result().to_vec();
-    let data_b58 = encode_data(&data, Encoding::Base58).unwrap();
+    let data_b58 = encode(&data, Encoding::Base58, Quality::Default).unwrap();
     String::from_utf8(data_b58).unwrap()
 }
 
@@ -70,7 +70,7 @@ lazy_static! {
 
 pub fn compute_file_identity<P: AsRef<Path>>(path: P) -> io::Result<String> {
     use sha2::{Digest, Sha256};
-    use smush::{encode_data, Encoding};
+    use smush::{encode, Encoding, Quality};
 
     let fbuffer = FileBuffer::open(&path)?;
 
@@ -82,7 +82,7 @@ pub fn compute_file_identity<P: AsRef<Path>>(path: P) -> io::Result<String> {
 
     // read hash digest and consume hasher
     let data = hasher.result().to_vec();
-    let data_b58 = encode_data(&data, Encoding::Base58).unwrap();
+    let data_b58 = encode(&data, Encoding::Base58, Quality::Default).unwrap();
     Ok(String::from_utf8(data_b58).unwrap())
 }
 
