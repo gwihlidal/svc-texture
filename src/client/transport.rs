@@ -10,6 +10,7 @@ use crate::proto::service::DownloadRequest;
 use crate::proto::service::ProcessOutput;
 use futures::future::Future;
 use futures::stream::Stream;
+use futures::Poll;
 use std::io::Write;
 use tokio::executor::DefaultExecutor;
 use tower_grpc::codegen::client::http::Uri;
@@ -17,6 +18,7 @@ use tower_grpc::Error as GrpcError;
 use tower_grpc::Request;
 use tower_h2::client;
 use tower_http::add_origin;
+use tower_service::Service;
 use tower_util::MakeService;
 
 #[derive(Debug, Clone)]
@@ -40,12 +42,16 @@ impl EndPoint {
     }
 }
 
-impl tokio_connect::Connect for EndPoint {
-    type Connected = tokio::net::tcp::TcpStream;
+impl Service<()> for EndPoint {
+    type Response = tokio::net::tcp::TcpStream;
     type Error = ::std::io::Error;
     type Future = tokio::net::tcp::ConnectFuture;
 
-    fn connect(&self) -> Self::Future {
+    fn poll_ready(&mut self) -> Poll<(), Self::Error> {
+        Ok(().into())
+    }
+
+    fn call(&mut self, _: ()) -> Self::Future {
         tokio::net::tcp::TcpStream::connect(&self.address)
     }
 }

@@ -8,7 +8,6 @@ extern crate futures_cpupool;
 extern crate prost;
 extern crate prost_types;
 extern crate tokio;
-extern crate tokio_connect;
 extern crate tower_grpc;
 extern crate tower_h2;
 extern crate tower_util;
