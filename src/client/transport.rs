@@ -14,8 +14,8 @@ use futures::Poll;
 use std::io::Write;
 use tokio::executor::DefaultExecutor;
 use tower_grpc::codegen::client::http::Uri;
-use tower_grpc::Status as GrpcError;
 use tower_grpc::Request;
+use tower_grpc::Status as GrpcError;
 use tower_h2::client;
 use tower_http::add_origin;
 use tower_service::Service;
@@ -92,10 +92,7 @@ pub fn query_missing_identities(config: &Config, identities: &[String]) -> Resul
                 .map_err(|err| panic!("gRPC request failed; err={:?}", err))
         })
         .map_err(|err| {
-            tower_grpc::Status::with_code_and_message(
-                tower_grpc::Code::Aborted,
-                err.to_string(),
-            )
+            tower_grpc::Status::with_code_and_message(tower_grpc::Code::Aborted, err.to_string())
         })
         .and_then(|response_stream| {
             // Convert the stream into a plain Vec
@@ -230,10 +227,7 @@ pub fn download_identity(config: &Config, identity: &str) -> Result<Vec<u8>> {
                 .map_err(|err| panic!("gRPC request failed; err={:?}", err))
         })
         .map_err(|err| {
-            tower_grpc::Status::with_code_and_message(
-                tower_grpc::Code::Aborted,
-                err.to_string(),
-            )
+            tower_grpc::Status::with_code_and_message(tower_grpc::Code::Aborted, err.to_string())
         })
         .and_then(|response_stream| {
             // Convert the stream into a plain Vec

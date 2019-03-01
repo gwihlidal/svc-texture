@@ -39,9 +39,9 @@ use svc_texture::utilities::{
 };
 use tokio::executor::DefaultExecutor;
 use tokio::net::TcpListener;
-use tower_grpc::Status as GrpcError;
 use tower_grpc::Request as GrpcRequest;
 use tower_grpc::Response as GrpcResponse;
+use tower_grpc::Status as GrpcError;
 use tower_h2::Server;
 
 mod process;
