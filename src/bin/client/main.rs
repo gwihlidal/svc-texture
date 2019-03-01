@@ -27,7 +27,8 @@ use svc_texture::error::Result;
 use svc_texture::process::schema;
 use svc_texture::process::*;
 use svc_texture::utilities::{
-    compute_file_identity, compute_identity, /*self,*/ path_exists, read_file,
+    compute_file_identity, compute_identity, get_texture_layout_info, /*self,*/ path_exists,
+    read_file,
 };
 
 const VERSION: Option<&'static str> = option_env!("CARGO_PKG_VERSION");
@@ -153,11 +154,20 @@ struct TextureArtifact {
     encoding: String,
 }
 
-#[derive(Clone, Default, Debug)]
+#[derive(Default, Debug)]
+struct TextureRecordRange {
+    offset: usize,
+    row_pitch: u32,
+    slice_pitch: u32,
+}
+
+#[derive(Default)]
 struct TextureRecord {
     entry: TextureEntry,
     input_identity: String,
     output_identity: Option<String>,
+    output_ranges: Vec<TextureRecordRange>,
+    output_desc: schema::TextureDescArgs,
 }
 
 fn process() -> Result<()> {
@@ -221,6 +231,8 @@ fn process() -> Result<()> {
                 entry: entry.clone(),
                 input_identity,
                 output_identity: None,
+                output_ranges: Vec::new(),
+                output_desc: Default::default(),
             });
         }
     }
@@ -262,17 +274,13 @@ fn process() -> Result<()> {
     {
         let mut records = records.write().unwrap();
         for record in &mut *records {
-            if record.entry.format == "dds" {
+            let (output_desc, output_data) = if record.entry.format == "dds" {
                 // Straight pass-through of dds blocks (with extracted header meta data)
                 let dds_data = fetch_from_cache(cache_path, &record.input_identity)
                     .expect("failed to fetch from cache");
 
                 let mut dds_data = std::io::Cursor::new(dds_data);
-                let (_desc, _data) = bcn::read_dds_result(&mut dds_data);
-
-                let output_identity = record.input_identity.to_owned();
-                assert!(cache_hit(cache_path, &output_identity));
-                record.output_identity = Some(output_identity);
+                bcn::read_dds_result(&mut dds_data)
             } else {
                 let input_path = base_path.join(&record.entry.file);
                 let input_image = image::open(&input_path).unwrap();
@@ -304,21 +312,35 @@ fn process() -> Result<()> {
 
                 if bcn::is_bcn_format(output_format) {
                     let mut dds_data = std::io::Cursor::new(&output_data);
-                    let (_desc, _data) = bcn::read_dds_result(&mut dds_data);
-                    println!("--");
-                    println!("width: {}", _desc.width);
-                    println!("height: {}", _desc.height);
-                    println!("depth: {}", _desc.depth);
-                    println!("format: {:?}", _desc.format);
-                    println!("levels: {}", _desc.levels);
-                    println!("elements: {}", _desc.elements);
-                    println!("type: {:?}", _desc.type_);
+                    bcn::read_dds_result(&mut dds_data)
+                } else {
+                    unimplemented!()
                 }
+            };
 
-                let output_identity = compute_identity(&output_data);
-                cache_if_missing(cache_path, &output_identity, &output_data)?;
-                record.output_identity = Some(output_identity);
+            let range_count = output_desc.levels * output_desc.elements;
+            record.output_ranges.reserve(range_count as usize);
+            let mut packed_offset: usize = 0;
+            for _ in 0..output_desc.elements {
+                for level in 0..output_desc.levels {
+                    let mip_width = output_desc.width >> level;
+                    let mip_height = output_desc.height >> level;
+                    let mip_layout =
+                        get_texture_layout_info(output_desc.format, mip_width, mip_height);
+                    record.output_ranges.push(TextureRecordRange {
+                        offset: packed_offset,
+                        row_pitch: mip_layout.pitch,
+                        slice_pitch: mip_layout.slice_pitch,
+                    });
+
+                    packed_offset += mip_layout.slice_pitch as usize;
+                }
             }
+
+            let output_identity = compute_identity(&output_data);
+            cache_if_missing(cache_path, &output_identity, &output_data)?;
+            record.output_identity = Some(output_identity);
+            record.output_desc = output_desc;
         }
     }
 
@@ -349,8 +371,34 @@ fn process() -> Result<()> {
 
     {
         let records = records.read().unwrap();
+        for record in &*records {
+            println!(
+                "Processed: input:{}, output:{}, ranges:{:?}",
+                record.input_identity,
+                record.output_identity.clone().unwrap_or_default(),
+                record.output_ranges
+            );
+        }
         //println!("Records: {:?}", records);
     }
+
+    /*
+            #[derive(Default)]
+    struct TextureRecordRange {
+        offset: usize,
+        row_pitch: u32,
+        slice_pitch: u32,
+    }
+
+    #[derive(Default)]
+    struct TextureRecord {
+        entry: TextureEntry,
+        input_identity: String,
+        output_identity: Option<String>,
+        output_ranges: Vec<TextureRecordRange>,
+        output_desc: schema::TextureDescArgs,
+    }
+        }*/
 
     if let Some(ref output_path) = process_opt.output {
         let records = records.read().unwrap();
@@ -362,36 +410,49 @@ fn process() -> Result<()> {
                 let name = Some(manifest_builder.create_string(&record.entry.name));
                 let desc = Some(schema::TextureDesc::create(
                     &mut manifest_builder,
-                    &schema::TextureDescArgs {
-                        type_: schema::TextureType::Tex2d,
-                        format: schema::TextureFormat::BC7_UNORM,
-                        width: 1024,
-                        height: 1024,
-                        depth: 1,
-                        levels: 1,
-                        elements: 1,
-                    },
+                    &record.output_desc,
                 ));
                 let identity = if let Some(ref identity) = record.output_identity {
                     identity.to_owned()
                 } else {
                     String::new()
                 };
-                let data = if process_opt.embed {
+
+                let texture_data: Vec<_> = if process_opt.embed {
                     let data = fetch_from_cache(cache_path, &identity)
                         .expect("failed to fetch from cache");
-                    Some(manifest_builder.create_vector(&data))
+
+                    record
+                        .output_ranges
+                        .iter()
+                        .map(|range| {
+                            let data_start = range.offset;
+                            let data_end = data_start + range.slice_pitch as usize;
+                            let data_slice = &data[data_start..data_end];
+                            let data_ref = Some(manifest_builder.create_vector(&data_slice));
+                            schema::TextureData::create(
+                                &mut manifest_builder,
+                                &schema::TextureDataArgs {
+                                    row_pitch: range.row_pitch,
+                                    slice_pitch: range.slice_pitch,
+                                    data: data_ref,
+                                },
+                            )
+                        })
+                        .collect()
                 } else {
-                    None
+                    Vec::new()
                 };
+
                 let identity = Some(manifest_builder.create_string(&identity));
+                let data = Some(manifest_builder.create_vector(&texture_data));
                 schema::Texture::create(
                     &mut manifest_builder,
                     &schema::TextureArgs {
                         name,
                         identity,
                         desc,
-                        data: None,
+                        data,
                     },
                 )
             })
