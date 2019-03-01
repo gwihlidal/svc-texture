@@ -212,6 +212,10 @@ fn process() -> Result<()> {
             let input_path = base_path.join(&entry.file);
             let input_identity = compute_file_identity(&input_path).unwrap();
             active_identities.push(input_identity.clone());
+            // TEMP START - Put in cache
+            let input_data = read_file(&base_path.join(&input_path)).unwrap();
+            cache_if_missing(cache_path, &input_identity, &input_data)?;
+            // TEMP END - Put in cache
             println!("name: {}, identity: {}", entry.name, input_identity);
             records.push(TextureRecord {
                 entry: entry.clone(),
