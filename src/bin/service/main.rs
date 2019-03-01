@@ -39,7 +39,7 @@ use svc_texture::utilities::{
 };
 use tokio::executor::DefaultExecutor;
 use tokio::net::TcpListener;
-use tower_grpc::Error as GrpcError;
+use tower_grpc::Status as GrpcError;
 use tower_grpc::Request as GrpcRequest;
 use tower_grpc::Response as GrpcResponse;
 use tower_h2::Server;
@@ -154,7 +154,7 @@ impl proto::service::server::Texture for ServiceBackend {
                         }
                     }
 
-                    Ok::<_, tower_grpc::Error>((upload_context, Some(request)))
+                    Ok::<_, tower_grpc::Status>((upload_context, Some(request)))
                 },
             )
             // Map the response to a gRPC response
