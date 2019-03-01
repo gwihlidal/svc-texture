@@ -264,11 +264,11 @@ fn process() -> Result<()> {
         for record in &mut *records {
             if record.entry.format == "dds" {
                 // Straight pass-through of dds blocks (with extracted header meta data)
-                //let dds_data = fetch_from_cache(cache_path, &record.input_identity)
-                //    .expect("failed to fetch from cache");
-                let dds_data = read_file(&base_path.join(&record.entry.file)).unwrap();
+                let dds_data = fetch_from_cache(cache_path, &record.input_identity)
+                    .expect("failed to fetch from cache");
+
                 let mut dds_data = std::io::Cursor::new(dds_data);
-                let (desc, data) = bcn::read_dds_result(&mut dds_data);
+                let (_desc, _data) = bcn::read_dds_result(&mut dds_data);
 
                 let output_identity = record.input_identity.to_owned();
                 assert!(cache_hit(cache_path, &output_identity));
@@ -291,12 +291,29 @@ fn process() -> Result<()> {
 
                 let output_format = parse_output_format(&record.entry.format);
                 let output_data = match output_format {
-                    OutputFormat::Bc1 => bcn::compress_bc1_2d(&images),
-                    OutputFormat::Bc3 => bcn::compress_bc3_2d(&images),
-                    OutputFormat::Bc6h => bcn::compress_bc6h_2d(&images, Bc6hQuality::Basic),
-                    OutputFormat::Bc7 => bcn::compress_bc7_2d(&images, Bc7Quality::Basic),
+                    schema::TextureFormat::BC1_UNORM => bcn::compress_bc1_2d(&images),
+                    schema::TextureFormat::BC3_UNORM => bcn::compress_bc3_2d(&images),
+                    schema::TextureFormat::BC6S_FLOAT => {
+                        bcn::compress_bc6h_2d(&images, Bc6hQuality::Basic)
+                    }
+                    schema::TextureFormat::BC7_UNORM => {
+                        bcn::compress_bc7_2d(&images, Bc7Quality::Basic)
+                    }
                     _ => unimplemented!(),
                 };
+
+                if bcn::is_bcn_format(output_format) {
+                    let mut dds_data = std::io::Cursor::new(&output_data);
+                    let (_desc, _data) = bcn::read_dds_result(&mut dds_data);
+                    println!("--");
+                    println!("width: {}", _desc.width);
+                    println!("height: {}", _desc.height);
+                    println!("depth: {}", _desc.depth);
+                    println!("format: {:?}", _desc.format);
+                    println!("levels: {}", _desc.levels);
+                    println!("elements: {}", _desc.elements);
+                    println!("type: {:?}", _desc.type_);
+                }
 
                 let output_identity = compute_identity(&output_data);
                 cache_if_missing(cache_path, &output_identity, &output_data)?;
@@ -332,12 +349,12 @@ fn process() -> Result<()> {
 
     {
         let records = records.read().unwrap();
-        println!("Records: {:?}", records);
+        //println!("Records: {:?}", records);
     }
 
     if let Some(ref output_path) = process_opt.output {
         let records = records.read().unwrap();
-        println!("Records: {:?}", records);
+        //println!("Records: {:?}", records);
         let mut manifest_builder = flatbuffers::FlatBufferBuilder::new();
         let manifest_textures: Vec<_> = records
             .iter()

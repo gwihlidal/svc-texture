@@ -1,10 +1,32 @@
 use crate::process::*;
-use ddsfile::{AlphaMode, Caps2, D3D10ResourceDimension, Dds, DxgiFormat, D3DFormat};
+use ddsfile::{AlphaMode, Caps2, D3D10ResourceDimension, D3DFormat, Dds, DxgiFormat};
 use image::FilterType;
 use image::GenericImageView;
 use image::ImageBuffer;
 use image::Pixel;
 use intel_tex::*;
+
+pub fn is_bcn_format(format: schema::TextureFormat) -> bool {
+    match format {
+        schema::TextureFormat::BC1_UNORM
+        | schema::TextureFormat::BC1_SRGB
+        | schema::TextureFormat::BC1A_UNORM
+        | schema::TextureFormat::BC1A_SRGB
+        | schema::TextureFormat::BC2_UNORM
+        | schema::TextureFormat::BC2_SRGB
+        | schema::TextureFormat::BC3_UNORM
+        | schema::TextureFormat::BC3_SRGB
+        | schema::TextureFormat::BC4_UNORM
+        | schema::TextureFormat::BC4_SNORM
+        | schema::TextureFormat::BC5_UNORM
+        | schema::TextureFormat::BC5_SNORM
+        | schema::TextureFormat::BC6U_FLOAT
+        | schema::TextureFormat::BC6S_FLOAT
+        | schema::TextureFormat::BC7_UNORM
+        | schema::TextureFormat::BC7_SRGB => true,
+        _ => false,
+    }
+}
 
 pub enum Bc6hQuality {
     VeryFast,
@@ -50,24 +72,24 @@ pub fn get_bc7_settings(quality: Bc7Quality, alpha: bool) -> bc7::EncodeSettings
     }
 }
 
-pub fn guess_format(color_type: image::ColorType) -> (OutputFormat, bool /* alpha */) {
+pub fn guess_format(color_type: image::ColorType) -> (schema::TextureFormat, bool /* alpha */) {
     // http://www.reedbeta.com/blog/understanding-bcn-texture-compression-formats/
     match color_type {
-        image::ColorType::Gray(ref _bit_depth) => (OutputFormat::Bc4, false),
-        image::ColorType::GrayA(ref _bit_depth) => (OutputFormat::Bc4, true),
+        image::ColorType::Gray(ref _bit_depth) => (schema::TextureFormat::BC4_UNORM, false),
+        image::ColorType::GrayA(ref _bit_depth) => (schema::TextureFormat::BC4_UNORM, true),
         image::ColorType::RGB(ref _bit_depth) => {
             //OutputFormat::Bc1
-            (OutputFormat::Bc7, false)
+            (schema::TextureFormat::BC7_UNORM, false)
         }
         image::ColorType::RGBA(ref _bit_depth) => {
             //OutputFormat::Bc3
-            (OutputFormat::Bc7, true)
+            (schema::TextureFormat::BC7_UNORM, true)
         }
         image::ColorType::BGRA(ref _bit_depth) => {
             //OutputFormat::Bc3
-            (OutputFormat::Bc7, true)
+            (schema::TextureFormat::BC7_UNORM, true)
         }
-        image::ColorType::BGR(ref _bit_depth) => (OutputFormat::Bc1, false),
+        image::ColorType::BGR(ref _bit_depth) => (schema::TextureFormat::BC1_UNORM, false),
         image::ColorType::Palette(ref _bit_depth) => unimplemented!(),
     }
 }
@@ -490,25 +512,86 @@ pub fn get_dds_format(dds: &Dds) -> schema::TextureFormat {
 
 pub fn extract_dds_result(dds: &Dds) -> (schema::TextureDescArgs, Vec<u8>) {
     let format = get_dds_format(dds);
-    println!("DDS Format is: {:?}", format);
 
-    if let Some(data_format) = dds.get_format() {
-        //
-    }
-    //dds.get_format()
-    //dds.get_dxgi_format()
-    //dds.get_d3d_format()
-    //dds.data
-    //dds.get_num_mipmap_levels()
-    //dds.get_num_array_layers()
+    // This gets the number of bytes required to store one row of data
+    //let pitch = data_format.get_pitch(dds.get_width()).expect("failed to determine pitch");
+    let pitch = dds.get_pitch().expect("failed to parse dds pitch");
+
+    // This gets the height of each row of data. Normally it is 1, but for block
+    // compressed textures, each row is 4 pixels high.
+    let pitch_height = dds.get_pitch_height();
+
+    // This gets the number of bits required to store a single pixel, and is
+    // only defined for uncompressed formats.
+    //let bits_per_pixel = dds.get_bits_per_pixel();
+
+    // This gets a block compression format's block size, and is only defined
+    // for compressed formats.
+    //let block_size = dds.get_block_size();
+
+    // This gets the minimum mipmap size in bytes. Even if they go all the way
+    // down to 1x1, there is a minimum number of bytes based on bits per pixel
+    // or blocksize.
+    let min_mip_size = dds.get_min_mipmap_size_in_bytes();
+
+    // Is DX10 extension required for this format?
+    //let extension = data_format.requires_extension();
+
+    let texture_type = if let Some(ref header10) = dds.header10 {
+        let is_array = false; // TODO
+        let is_cube = false; // TODO
+                             /*
+                             DDS: Dds:
+                             Format: A32B32G32R32F
+                             Header:
+                                 flags: CAPS | HEIGHT | WIDTH | PITCH | PIXELFORMAT | MIPMAPCOUNT
+                                 height: 512, width: 512, depth: None
+                                 pitch: Some(32)  linear_size: None
+                                 mipmap_count: Some(10)
+                                 caps: MIPMAP | TEXTURE, caps2 CUBEMAP | CUBEMAP_POSITIVEX | CUBEMAP_NEGATIVEX | CUBEMAP_POSITIVEY | CUBEMAP_NEGATIVEY | CUBEMAP_POSITIVEZ | CUBEMAP_NEGATIVEZ
+                                 Pixel Format:
+                                 flags: FOURCC
+                                 fourcc: Some(FourCC(116))
+                                 bits_per_pixel: None
+                                 RGBA bitmasks: None, None, None, None
+                             (data elided)
+                             */
+
+        if is_array {
+            if is_cube {
+                schema::TextureType::CubeArray
+            } else {
+                match header10.resource_dimension {
+                    D3D10ResourceDimension::Unknown => unimplemented!(),
+                    D3D10ResourceDimension::Buffer => unimplemented!(),
+                    D3D10ResourceDimension::Texture1D => schema::TextureType::Tex1dArray,
+                    D3D10ResourceDimension::Texture2D => schema::TextureType::Tex2dArray,
+                    D3D10ResourceDimension::Texture3D => unimplemented!(),
+                }
+            }
+        } else {
+            if is_cube {
+                schema::TextureType::Cube
+            } else {
+                match header10.resource_dimension {
+                    D3D10ResourceDimension::Unknown => unimplemented!(),
+                    D3D10ResourceDimension::Buffer => unimplemented!(),
+                    D3D10ResourceDimension::Texture1D => schema::TextureType::Tex1dArray, // TODO
+                    D3D10ResourceDimension::Texture2D => schema::TextureType::Tex2d,
+                    D3D10ResourceDimension::Texture3D => schema::TextureType::Tex3d,
+                }
+            }
+        }
+    } else {
+        schema::TextureType::Tex2d // TODO:
+    };
+
     //dds.get_offset_and_size(array_layer: u32)
-    //dds.header10
     //dds.get_data(array_layer: u32)
-    //dds.get_bits_per_pixel()
     //dds.get_array_stride()
-    println!("DDS: {:?}", dds);
+    //println!("DDS: {:?}", dds);
     let desc = schema::TextureDescArgs {
-        type_: schema::TextureType::Tex2d,
+        type_: texture_type,
         format,
         width: dds.get_width(),
         height: dds.get_height(),
@@ -516,5 +599,5 @@ pub fn extract_dds_result(dds: &Dds) -> (schema::TextureDescArgs, Vec<u8>) {
         levels: dds.get_num_mipmap_levels(),
         elements: dds.get_num_array_layers(),
     };
-    (desc, Vec::new())
+    (desc, dds.data.clone())
 }

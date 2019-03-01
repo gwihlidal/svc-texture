@@ -43,12 +43,12 @@ pub fn parse_manifest(base_dir: &Path, manifest_toml: &str) -> Result<TextureMan
     Ok(manifest)
 }
 
-pub fn parse_output_format(format: &str) -> super::OutputFormat {
+pub fn parse_output_format(format: &str) -> schema::TextureFormat {
     match format {
-        "bc1" => super::OutputFormat::Bc1,
-        "bc3" => super::OutputFormat::Bc3,
-        "bc6h" => super::OutputFormat::Bc6h,
-        "bc7" => super::OutputFormat::Bc7,
+        "bc1" => schema::TextureFormat::BC1_UNORM,
+        "bc3" => schema::TextureFormat::BC3_UNORM,
+        "bc6h" => schema::TextureFormat::BC6S_FLOAT,
+        "bc7" => schema::TextureFormat::BC7_UNORM,
         _ => unimplemented!(),
     }
 }

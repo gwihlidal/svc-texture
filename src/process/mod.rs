@@ -25,14 +25,3 @@ pub fn alpha_format(color_type: image::ColorType) -> bool {
 pub fn calculate_mip_count(width: u32, height: u32) -> u32 {
     1 + (std::cmp::max(width, height) as f32).log2().floor() as u32
 }
-
-#[derive(Clone, Debug)]
-pub enum OutputFormat {
-    Bc1,
-    Bc2,
-    Bc3,
-    Bc4,
-    Bc5,
-    Bc6h,
-    Bc7,
-}
