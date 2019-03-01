@@ -19,18 +19,20 @@ struct Texture;
 struct Manifest;
 
 enum TextureType {
-  TextureType_Tex1dArray = 0,
-  TextureType_Tex2d = 1,
-  TextureType_Tex2dArray = 2,
-  TextureType_Tex3d = 3,
-  TextureType_Cube = 4,
-  TextureType_CubeArray = 5,
-  TextureType_MIN = TextureType_Tex1dArray,
+  TextureType_Tex1d = 0,
+  TextureType_Tex1dArray = 1,
+  TextureType_Tex2d = 2,
+  TextureType_Tex2dArray = 3,
+  TextureType_Tex3d = 4,
+  TextureType_Cube = 5,
+  TextureType_CubeArray = 6,
+  TextureType_MIN = TextureType_Tex1d,
   TextureType_MAX = TextureType_CubeArray
 };
 
-inline const TextureType (&EnumValuesTextureType())[6] {
+inline const TextureType (&EnumValuesTextureType())[7] {
   static const TextureType values[] = {
+    TextureType_Tex1d,
     TextureType_Tex1dArray,
     TextureType_Tex2d,
     TextureType_Tex2dArray,
@@ -43,6 +45,7 @@ inline const TextureType (&EnumValuesTextureType())[6] {
 
 inline const char * const *EnumNamesTextureType() {
   static const char * const names[] = {
+    "Tex1d",
     "Tex1dArray",
     "Tex2d",
     "Tex2dArray",
@@ -546,7 +549,7 @@ struct TextureDescBuilder {
 
 inline flatbuffers::Offset<TextureDesc> CreateTextureDesc(
     flatbuffers::FlatBufferBuilder &_fbb,
-    TextureType type = TextureType_Tex1dArray,
+    TextureType type = TextureType_Tex1d,
     TextureFormat format = TextureFormat_UNKNOWN,
     uint32_t width = 0,
     uint32_t height = 0,

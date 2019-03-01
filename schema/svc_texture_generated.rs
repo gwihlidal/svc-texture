@@ -37,17 +37,18 @@ pub mod schema {
 #[repr(i8)]
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum TextureType {
-  Tex1dArray = 0,
-  Tex2d = 1,
-  Tex2dArray = 2,
-  Tex3d = 3,
-  Cube = 4,
-  CubeArray = 5,
+  Tex1d = 0,
+  Tex1dArray = 1,
+  Tex2d = 2,
+  Tex2dArray = 3,
+  Tex3d = 4,
+  Cube = 5,
+  CubeArray = 6,
 
 }
 
 const ENUM_MIN_TEXTURE_TYPE: i8 = 0;
-const ENUM_MAX_TEXTURE_TYPE: i8 = 5;
+const ENUM_MAX_TEXTURE_TYPE: i8 = 6;
 
 impl<'a> flatbuffers::Follow<'a> for TextureType {
   type Inner = Self;
@@ -81,7 +82,8 @@ impl flatbuffers::Push for TextureType {
 }
 
 #[allow(non_camel_case_types)]
-const ENUM_VALUES_TEXTURE_TYPE:[TextureType; 6] = [
+const ENUM_VALUES_TEXTURE_TYPE:[TextureType; 7] = [
+  TextureType::Tex1d,
   TextureType::Tex1dArray,
   TextureType::Tex2d,
   TextureType::Tex2dArray,
@@ -91,7 +93,8 @@ const ENUM_VALUES_TEXTURE_TYPE:[TextureType; 6] = [
 ];
 
 #[allow(non_camel_case_types)]
-const ENUM_NAMES_TEXTURE_TYPE:[&'static str; 6] = [
+const ENUM_NAMES_TEXTURE_TYPE:[&'static str; 7] = [
+    "Tex1d",
     "Tex1dArray",
     "Tex2d",
     "Tex2dArray",
@@ -617,7 +620,7 @@ impl<'a> TextureDesc<'a> {
 
   #[inline]
   pub fn type_(&self) -> TextureType {
-    self._tab.get::<TextureType>(TextureDesc::VT_TYPE_, Some(TextureType::Tex1dArray)).unwrap()
+    self._tab.get::<TextureType>(TextureDesc::VT_TYPE_, Some(TextureType::Tex1d)).unwrap()
   }
   #[inline]
   pub fn format(&self) -> TextureFormat {
@@ -658,7 +661,7 @@ impl<'a> Default for TextureDescArgs {
     #[inline]
     fn default() -> Self {
         TextureDescArgs {
-            type_: TextureType::Tex1dArray,
+            type_: TextureType::Tex1d,
             format: TextureFormat::UNKNOWN,
             width: 0,
             height: 0,
@@ -675,7 +678,7 @@ pub struct TextureDescBuilder<'a: 'b, 'b> {
 impl<'a: 'b, 'b> TextureDescBuilder<'a, 'b> {
   #[inline]
   pub fn add_type_(&mut self, type_: TextureType) {
-    self.fbb_.push_slot::<TextureType>(TextureDesc::VT_TYPE_, type_, TextureType::Tex1dArray);
+    self.fbb_.push_slot::<TextureType>(TextureDesc::VT_TYPE_, type_, TextureType::Tex1d);
   }
   #[inline]
   pub fn add_format(&mut self, format: TextureFormat) {

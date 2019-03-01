@@ -1,6 +1,7 @@
 namespace service.texture.schema;
 
 enum TextureType:byte {
+	Tex1d,
     Tex1dArray,
     Tex2d,
 	Tex2dArray,
