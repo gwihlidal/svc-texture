@@ -515,11 +515,11 @@ pub fn extract_dds_result(dds: &Dds) -> (schema::TextureDescArgs, Vec<u8>) {
 
     // This gets the number of bytes required to store one row of data
     //let pitch = data_format.get_pitch(dds.get_width()).expect("failed to determine pitch");
-    let pitch = dds.get_pitch().expect("failed to parse dds pitch");
+    let _pitch = dds.get_pitch().expect("failed to parse dds pitch");
 
     // This gets the height of each row of data. Normally it is 1, but for block
     // compressed textures, each row is 4 pixels high.
-    let pitch_height = dds.get_pitch_height();
+    let _pitch_height = dds.get_pitch_height();
 
     // This gets the number of bits required to store a single pixel, and is
     // only defined for uncompressed formats.
@@ -532,9 +532,9 @@ pub fn extract_dds_result(dds: &Dds) -> (schema::TextureDescArgs, Vec<u8>) {
     // This gets the minimum mipmap size in bytes. Even if they go all the way
     // down to 1x1, there is a minimum number of bytes based on bits per pixel
     // or blocksize.
-    let min_mip_size = dds.get_min_mipmap_size_in_bytes();
+    let _min_mip_size = dds.get_min_mipmap_size_in_bytes();
 
-    println!("dds: {:?}", dds);
+    //println!("dds: {:?}", dds);
 
     // Is DX10 extension required for this format?
     //let extension = data_format.requires_extension();
