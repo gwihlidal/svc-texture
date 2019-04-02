@@ -318,22 +318,32 @@ fn process() -> Result<()> {
                 }
             };
 
-            let range_count = output_desc.levels * output_desc.elements;
+            let face_count = if output_desc.type_ == schema::TextureType::Cube
+                || output_desc.type_ == schema::TextureType::CubeArray
+            {
+                6
+            } else {
+                1
+            };
+
+            let range_count = output_desc.levels * output_desc.elements * face_count;
             record.output_ranges.reserve(range_count as usize);
             let mut packed_offset: usize = 0;
-            for _ in 0..output_desc.elements {
-                for level in 0..output_desc.levels {
-                    let mip_width = output_desc.width >> level;
-                    let mip_height = output_desc.height >> level;
-                    let mip_layout =
-                        get_texture_layout_info(output_desc.format, mip_width, mip_height);
-                    record.output_ranges.push(TextureRecordRange {
-                        offset: packed_offset,
-                        row_pitch: mip_layout.pitch,
-                        slice_pitch: mip_layout.slice_pitch,
-                    });
+            for _ in 0..face_count {
+                for _ in 0..output_desc.elements {
+                    for level in 0..output_desc.levels {
+                        let mip_width = output_desc.width >> level;
+                        let mip_height = output_desc.height >> level;
+                        let mip_layout =
+                            get_texture_layout_info(output_desc.format, mip_width, mip_height);
+                        record.output_ranges.push(TextureRecordRange {
+                            offset: packed_offset,
+                            row_pitch: mip_layout.pitch,
+                            slice_pitch: mip_layout.slice_pitch,
+                        });
 
-                    packed_offset += mip_layout.slice_pitch as usize;
+                        packed_offset += mip_layout.slice_pitch as usize;
+                    }
                 }
             }
 
