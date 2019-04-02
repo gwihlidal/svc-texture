@@ -534,12 +534,18 @@ pub fn extract_dds_result(dds: &Dds) -> (schema::TextureDescArgs, Vec<u8>) {
     // or blocksize.
     let min_mip_size = dds.get_min_mipmap_size_in_bytes();
 
+    println!("dds: {:?}", dds);
+
     // Is DX10 extension required for this format?
     //let extension = data_format.requires_extension();
 
-    let texture_type = if let Some(ref header10) = dds.header10 {
+    // TODO: The dds crate needs some work...
+
+    let texture_type = /*if let Some(ref header10) = dds.header10 {
+        println!("Have header10");
         let is_array = false; // TODO
-        let is_cube = false; // TODO
+        let is_cube = header10.get_
+        //.misc_flag.contains(ddsfile::Header10::MiscFlag::TEXTURECODE);
                              /*
                              DDS: Dds:
                              Format: A32B32G32R32F
@@ -583,8 +589,28 @@ pub fn extract_dds_result(dds: &Dds) -> (schema::TextureDescArgs, Vec<u8>) {
             }
         }
     } else {
-        schema::TextureType::Tex2d // TODO:
-    };
+    */
+        if dds.header.caps2.contains(ddsfile::Caps2::VOLUME) {
+            schema::TextureType::Tex3d
+        } else {
+            let is_array = dds.get_num_array_layers() > 1;
+            if dds.header.caps2.contains(ddsfile::Caps2::CUBEMAP) {
+                schema::TextureType::Cube
+            } else if dds.get_height() > 1 {
+                if is_array {
+                     schema::TextureType::Tex2dArray
+                } else {
+                    schema::TextureType::Tex2d
+                }
+            } else {
+                if is_array {
+                    schema::TextureType::Tex1dArray
+                } else {
+                    schema::TextureType::Tex1d
+                }
+            }
+        };
+    //};
 
     //dds.get_offset_and_size(array_layer: u32)
     //dds.get_data(array_layer: u32)
