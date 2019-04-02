@@ -346,7 +346,7 @@ pub fn get_dds_format(dds: &Dds) -> schema::TextureFormat {
         match dxgi {
             DxgiFormat::Unknown => TextureFormat::UNKNOWN,
             DxgiFormat::R32G32B32A32_Typeless => unimplemented!(),
-            DxgiFormat::R32G32B32A32_Float => unimplemented!(),
+            DxgiFormat::R32G32B32A32_Float => TextureFormat::R32G32B32A32_FLOAT,
             DxgiFormat::R32G32B32A32_UInt => unimplemented!(),
             DxgiFormat::R32G32B32A32_SInt => unimplemented!(),
             DxgiFormat::R32G32B32_Typeless => unimplemented!(),
