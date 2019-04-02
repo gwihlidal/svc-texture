@@ -74,3 +74,6 @@ test = false
 name = "service"
 path = "src/bin/service/main.rs"
 test = false
+
+[profile.release]
+debug = true
