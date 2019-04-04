@@ -418,6 +418,7 @@ pub fn get_texture_format_info(format: schema::TextureFormat) -> TextureFormatIn
             // Ignore compressed formats
         }
         _ => {
+            println!("format {:?} is not implemented!", format);
             unimplemented!();
         }
     }
@@ -458,6 +459,7 @@ pub fn get_texture_format_info(format: schema::TextureFormat) -> TextureFormatIn
                 info.block_height = 4;
             }
             _ => {
+                println!("format {:?} is not implemented!", format);
                 unimplemented!();
             }
         },

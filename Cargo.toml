@@ -61,6 +61,8 @@ image = "0.21.0"
 ddsfile = "0.2.3"
 smush = "0.1.4"
 bincode = "1.1.2"
+#gli-rs = "0.3.0"
+#gli-rs = { git = "https://github.com/Houjuu-Nue/gli-rs.git" }
 
 [build-dependencies]
 tower-grpc-build = { git = "https://github.com/tower-rs/tower-grpc" }
