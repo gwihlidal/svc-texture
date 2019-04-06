@@ -159,6 +159,7 @@ struct TextureRecordRange {
     offset: usize,
     row_pitch: u32,
     slice_pitch: u32,
+    slice_count: u32,
 }
 
 #[derive(Default)]
@@ -334,12 +335,18 @@ fn process() -> Result<()> {
                     for level in 0..output_desc.levels {
                         let mip_width = output_desc.width >> level;
                         let mip_height = output_desc.height >> level;
+                        let mip_depth = if output_desc.depth > 1 {
+                            output_desc.depth >> level
+                        } else {
+                            1
+                        };
                         let mip_layout =
                             get_texture_layout_info(output_desc.format, mip_width, mip_height);
                         record.output_ranges.push(TextureRecordRange {
                             offset: packed_offset,
                             row_pitch: mip_layout.pitch,
                             slice_pitch: mip_layout.slice_pitch,
+                            slice_count: mip_depth,
                         });
 
                         packed_offset += mip_layout.slice_pitch as usize;
@@ -437,7 +444,7 @@ fn process() -> Result<()> {
                         .iter()
                         .map(|range| {
                             let data_start = range.offset;
-                            let data_end = data_start + range.slice_pitch as usize;
+                            let data_end = data_start + (range.slice_pitch * range.slice_count) as usize;
                             let data_slice = &data[data_start..data_end];
                             let data_ref = Some(manifest_builder.create_vector(&data_slice));
                             schema::TextureData::create(
